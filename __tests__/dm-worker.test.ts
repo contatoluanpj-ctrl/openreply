@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+// O portão do Jev da OPI (lib/opi/jev-gate.ts) vem LIGADO por padrão e tem
+// testes próprios em opi-jev-gate.test.ts / opi-jev-worker.test.ts. Aqui ele
+// fica desligado para estes testes cobrirem o comportamento original do worker.
+process.env.OPI_JEV_GATE = "off";
+
 const {
   mockPrisma,
   mockSendPrivateReply,

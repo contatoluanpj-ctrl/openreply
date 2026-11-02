@@ -40,6 +40,7 @@ import {
   type InstagramContext,
 } from "@/lib/instagram/provider";
 import { matchKeywords } from "@/lib/utils/keyword-matcher";
+import { aplicarPortaoJev } from "@/lib/opi/jev-worker";
 import { reserveDMSlot, releaseDMSlot } from "@/lib/utils/rate-limiter";
 import {
   releaseWorkspaceDMReservation,
@@ -367,6 +368,23 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
     ) {
       continue;
     }
+
+    // OPI: portão do Jev (lib/opi/jev-gate.ts). Segurado para revisão = nem DM
+    // nem resposta pública, para sempre (até ação manual). Vale também para
+    // campanhas "matchAnyWord". OPI_JEV_GATE=off desliga.
+    if (existingLog?.status === "HELD_FOR_REVIEW") continue;
+    const liberado = await aplicarPortaoJev({
+      automation,
+      commentId,
+      texto: commentText,
+      commenterId,
+      commenterName: commenterName ?? null,
+      matchedKeyword: matchResult.matchedKeyword,
+      origem: "comentário",
+      jevDecisionAnterior: existingLog?.jevDecision ?? null,
+      precisaDm: needsDm,
+    });
+    if (!liberado) continue;
 
     if (!hasInstagramCredentials(automation.instagramAccount)) {
       await prisma.dmLog.upsert({
@@ -1325,10 +1343,25 @@ async function processMessage(job: Job<ProcessMessageJob>): Promise<void> {
     if (
       existingLog?.status === "SENT" ||
       existingLog?.status === "SKIPPED_PLAN_LIMIT" ||
+      existingLog?.status === "HELD_FOR_REVIEW" ||
       existingLog?.dmDeliveryUnconfirmed
     ) {
       continue;
     }
+
+    // OPI: portão do Jev também no gatilho por DM/Story.
+    const liberado = await aplicarPortaoJev({
+      automation,
+      commentId: dedupeId,
+      texto: messageText,
+      commenterId: senderId,
+      commenterName: null,
+      matchedKeyword: matchResult.matchedKeyword,
+      origem: "DM",
+      jevDecisionAnterior: existingLog?.jevDecision ?? null,
+      precisaDm: true,
+    });
+    if (!liberado) continue;
 
     const logBase = {
       workspaceId: automation.workspaceId,

@@ -260,6 +260,12 @@ model DmLog {
   publicReplySentAt DateTime?
   publicReplyError  String?
 
+  // OPI (portão do Jev): decisão, motivo e probabilidades por pergunta. Vazios
+  // quando OPI_JEV_GATE=off ou para logs anteriores ao portão.
+  jevDecision String?
+  jevReason   String?
+  jevScores   Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -272,6 +278,30 @@ model DmLog {
   @@index([automationId])
   @@index([instagramAccountId])
   @@index([status])
+}
+
+// OPI jev-ledger: uma linha por pergunta por chamada ao Jev (TypeSafe), no
+// formato do Lumio automation/jev-ledger/ledger.jsonl (exportado por
+// scripts/export-jev-ledger.ts). Sem relações de propósito: o ledger sobrevive
+// à remoção de campanhas e não guarda o texto do comentário, só o hash.
+model JevLedger {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  workspaceId   String
+  automationId  String
+  commentId     String
+  pergunta      String
+  versao        Int
+  p             Float?
+  erro          String?
+  decisao       String
+  finalLuan     Boolean?
+  resultadoReal String?
+  entradaHash   String
+
+  @@index([workspaceId])
+  @@index([automationId, commentId])
+  @@index([createdAt])
 }
 
 // Legacy reconciliation model; currently unwired. Runtime code does not read
@@ -392,6 +422,9 @@ enum DmStatus {
   SKIPPED_RATE_LIMIT
   SKIPPED_PLAN_LIMIT
   SKIPPED_NO_MATCH
+  // OPI: o portão do Jev (lib/opi/jev-gate.ts) segurou a DM e a resposta pública
+  // para revisão manual do Luan ou da Compliance. Nada sai deste estado sozinho.
+  HELD_FOR_REVIEW
 }
 
 enum WebhookStatus {

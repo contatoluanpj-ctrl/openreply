@@ -249,6 +249,8 @@ async function sweepCampaign({
       },
     });
     const handledSet = new Set(logs.filter((log) => {
+      // OPI: segurado pelo portão do Jev = tratado (só sai por ação manual).
+      if (log.status === "HELD_FOR_REVIEW") return true;
       const dmStopped = log.status === "SENT" || log.status === "SKIPPED_PLAN_LIMIT" ||
         log.dmDeliveryUnconfirmed || log.attempts >= MAX_COMMENT_SEND_ATTEMPTS ||
         (log.status === "FAILED" && hasLegacyUnconfirmedDelivery(log.errorMessage));
