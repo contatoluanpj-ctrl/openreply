@@ -33,6 +33,9 @@ export interface ProcessCommentJob {
   // Set when the comment came from an ad: the organic post the ad was made
   // from. Campaigns are bound to that post, so both ids have to be matched.
   originalMediaId?: string;
+  // OPI: horário do comentário (ISO), quando conhecido (reconciliador). O portão do Jev segura
+  // comentários com mais de 7 dias (PARECER §8.2-3). Sem ele (webhook), o comentário é tratado como novo.
+  commentTimestamp?: string;
   requeueAttempt?: number;
   // Which path enqueued this comment. It is not copied to ProcessedComment or
   // used for reconciliation dedup.

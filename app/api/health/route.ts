@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { getDMQueue, getRedisConnection } from "@/lib/queue/client";
 import { getWorkerHealth } from "@/lib/ops/worker-health";
+import { gateLigado } from "@/lib/opi/jev-gate";
 
 export const runtime = "nodejs";
 // Health must reflect live state (worker heartbeat, queue depth), never a
@@ -93,7 +94,15 @@ export async function GET() {
     })),
   ]);
 
+  // OPI: com o portão do Jev ligado, sem a chave do Jev nada sai e sem o Telegram os avisos ao Luan se perdem.
+  // Só os NOMES das variáveis ausentes aparecem, nunca os valores.
+  const faltando = gateLigado()
+    ? ["TYPESAFE_API_KEY", "OPI_TELEGRAM_BOT_TOKEN", "OPI_TELEGRAM_CHAT_ID"].filter((k) => !process.env[k]?.trim())
+    : [];
+  const opi = { status: (faltando.length ? "error" : "ok") as CheckStatus, gate: gateLigado() ? "on" : "off", faltando };
+
   const healthy =
+    opi.status === "ok" &&
     database.status === "ok" &&
     redis.status === "ok" &&
     queue.status === "ok" &&
@@ -107,6 +116,7 @@ export async function GET() {
         redis,
         queue,
         worker,
+        opi,
       },
     },
     { status: healthy ? 200 : 503 }

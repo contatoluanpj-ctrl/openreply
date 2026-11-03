@@ -40,7 +40,18 @@ import {
   type InstagramContext,
 } from "@/lib/instagram/provider";
 import { matchKeywords } from "@/lib/utils/keyword-matcher";
-import { aplicarPortaoJev } from "@/lib/opi/jev-worker";
+import {
+  aplicarPortaoJev,
+  avisarComentarioSemCampanha,
+  avisarPrimeiraDm,
+  avisarPrimeiraDmFalhou,
+  envioExtraBloqueado,
+  filtrarRespostaPublica,
+  reservarEnvio,
+  respostaPublicaLiberada,
+  respostaPublicaSoAposDm,
+  templateDoEnvio,
+} from "@/lib/opi/jev-worker";
 import { reserveDMSlot, releaseDMSlot } from "@/lib/utils/rate-limiter";
 import {
   releaseWorkspaceDMReservation,
@@ -322,6 +333,7 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
     orderBy: { createdAt: "asc" },
   });
 
+  let algumaCampanhaCasou = false;
   for (const automation of automations) {
     // "Any word" campaigns fire on every comment; otherwise require a keyword hit.
     const matchResult = automation.matchAnyWord
@@ -335,6 +347,7 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
     if (!matchResult.matched) {
       continue;
     }
+    algumaCampanhaCasou = true;
 
     const existingLog = await prisma.dmLog.findUnique({
       where: {
@@ -381,8 +394,8 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
       commenterName: commenterName ?? null,
       matchedKeyword: matchResult.matchedKeyword,
       origem: "comentário",
+      commentTimestamp: job.data.commentTimestamp ?? null,
       jevDecisionAnterior: existingLog?.jevDecision ?? null,
-      precisaDm: needsDm,
     });
     if (!liberado) continue;
 
@@ -464,12 +477,16 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
     // Public reply leg — decoupled from the DM and posted first so a DM failure
     // (e.g. a non-follower whose messaging is restricted) never suppresses it.
     // Idempotent across retries via publicReplySentAt.
-    const replyPool =
+    // OPI: com o portão ligado, só a frase aprovada "Te mandei na DM! 📩" pode sair,
+    // e só depois de a DM estar confirmada (SENT), para a frase nunca ser falsa.
+    const enviarRespostaPublica = async () => {
+    const replyPool = filtrarRespostaPublica(
       automation.publicReplyMessages.length > 0
         ? automation.publicReplyMessages
         : automation.publicReplyMessage
           ? [automation.publicReplyMessage]
-          : [];
+          : []
+    );
     if (
       automation.publicReplyEnabled &&
       replyPool.length > 0 &&
@@ -514,6 +531,8 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
           .catch(() => {});
       }
     }
+    };
+    if ((!respostaPublicaSoAposDm() || alreadyDmd) && await respostaPublicaLiberada()) await enviarRespostaPublica();
 
     // DM already sent on an earlier pass; the public reply retry above was all
     // this run needed. Don't re-send the DM.
@@ -667,6 +686,16 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
           : alreadyFollows !== true;
     }
 
+    // OPI: reserva logo antes do envio. Pausa da 1ª DM de cada texto (só ESTE job envia a 1ª)
+    // e freio (/pausar_dm) valendo para jobs já em curso. Sem reserva, o DmLog fica PENDING e
+    // o reconciliador traz o comentário de volta quando a campanha voltar.
+    const reserva = await reservarEnvio(automation);
+    if (reserva === "nao") {
+      if (rateLimit?.reserved) await releaseDMSlot(instagramAccountId);
+      await releaseWorkspaceDMReservation(automation.workspaceId, usage.periodStart);
+      continue;
+    }
+
     let claimed;
     try {
       claimed = await claimCommentDelivery(automation.id, commentId, "dm");
@@ -678,6 +707,7 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
     if (!claimed) {
       if (rateLimit?.reserved) await releaseDMSlot(instagramAccountId);
       await releaseWorkspaceDMReservation(automation.workspaceId, usage.periodStart);
+      if (reserva === "primeira") await avisarPrimeiraDmFalhou(automation, commenterName ?? null, commentId);
       continue;
     }
     let delivered = false;
@@ -792,6 +822,7 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
         },
         data: {
           status: "SENT",
+          dmTemplateHash: templateDoEnvio(automation.dmMessage),
           dmSentAt: new Date(),
           dmDeliveryUnconfirmed: false,
           errorMessage: null,
@@ -808,13 +839,28 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
         where: { automationId_commentId: { automationId: automation.id, commentId } },
         data: {
           status: delivered ? "SENT" : "FAILED",
-          ...(delivered ? { dmSentAt: new Date() } : {}),
+          ...(delivered ? { dmSentAt: new Date(), dmTemplateHash: templateDoEnvio(automation.dmMessage) } : {}),
           errorMessage: formatError(sendError),
           dmDeliveryUnconfirmed: isDeliveryUnconfirmed(sendError),
         },
       });
+      if (reserva === "primeira") {
+        if (delivered) await avisarPrimeiraDm(automation, commenterName ?? null, commentId);
+        else await avisarPrimeiraDmFalhou(automation, commenterName ?? null, commentId, isDeliveryUnconfirmed(sendError));
+      }
       throw sendError;
     }
+
+    // OPI: 1ª DM deste texto confirmada: avisa o Luan (campanha pausada para a Compliance conferir).
+    if (reserva === "primeira") await avisarPrimeiraDm(automation, commenterName ?? null, commentId);
+    // OPI: com o portão ligado, a resposta pública sai só agora, com a DM confirmada.
+    if (respostaPublicaSoAposDm()) await enviarRespostaPublica();
+  }
+
+  // OPI: nenhuma campanha ativa casou este comentário. Nada sai; o Luan é avisado
+  // no Telegram e decide se responde (Frente C, 02/11/2026).
+  if (!algumaCampanhaCasou) {
+    await avisarComentarioSemCampanha({ commentId, commenterName: commenterName ?? null, texto: commentText, mediaId });
   }
 }
 
@@ -931,7 +977,9 @@ async function processPostback(job: Job<ProcessPostbackJob>): Promise<void> {
   if (
     !automation ||
     automation.instagramAccount.instagramId !== instagramAccountId ||
-    !hasInstagramCredentials(automation.instagramAccount)
+    !hasInstagramCredentials(automation.instagramAccount) ||
+    // OPI: com o portão ligado, nenhum toque em botão envia nada (campanha conforme não tem botão).
+    envioExtraBloqueado(automation)
   ) {
     return;
   }
@@ -1254,7 +1302,9 @@ async function processFollowUp(job: Job<ProcessFollowUpJob>): Promise<void> {
     !automation.followUpEnabled ||
     !automation.followUpMessage?.trim() ||
     automation.instagramAccount.instagramId !== instagramAccountId ||
-    !hasInstagramCredentials(automation.instagramAccount)
+    !hasInstagramCredentials(automation.instagramAccount) ||
+    // OPI: sem acompanhamento automático (PARECER); com o portão ligado, nada sai por aqui.
+    envioExtraBloqueado(automation)
   ) {
     return;
   }
@@ -1359,7 +1409,6 @@ async function processMessage(job: Job<ProcessMessageJob>): Promise<void> {
       matchedKeyword: matchResult.matchedKeyword,
       origem: "DM",
       jevDecisionAnterior: existingLog?.jevDecision ?? null,
-      precisaDm: true,
     });
     if (!liberado) continue;
 

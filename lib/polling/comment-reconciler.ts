@@ -40,10 +40,12 @@ import {
   type InstagramContext,
 } from "@/lib/instagram/provider";
 import { matchKeywords } from "@/lib/utils/keyword-matcher";
+import { filtrarRespostaPublica, respostaPublicaSoAposDm } from "@/lib/opi/jev-worker";
 
 // Only consider comments from the last few days — older ones are outside
 // Instagram's private-reply window anyway, so a DM to them would just fail.
-const LOOKBACK_HOURS = Number(process.env.COMMENT_POLL_LOOKBACK_HOURS ?? 72);
+// OPI: nunca mais de 7 dias (PARECER §8.2-3), mesmo que a variável peça mais.
+const LOOKBACK_HOURS = Math.min(Number(process.env.COMMENT_POLL_LOOKBACK_HOURS ?? 72), 168);
 // Hard cap on how many new comments a single campaign can enqueue per sweep, so
 // a viral post drains gradually instead of bursting into the comment API.
 const MAX_NEW_PER_SWEEP = Number(process.env.COMMENT_POLL_MAX_PER_SWEEP ?? 30);
@@ -79,6 +81,8 @@ export async function reconcileComments(): Promise<void> {
       keywords: true,
       wholeWordMatch: true,
       publicReplyEnabled: true,
+      publicReplyMessage: true,
+      publicReplyMessages: true,
       workspaceId: true,
       instagramAccount: {
         select: {
@@ -130,6 +134,8 @@ async function sweepCampaign({
     keywords: string[];
     wholeWordMatch: boolean;
     publicReplyEnabled: boolean;
+    publicReplyMessage: string | null;
+    publicReplyMessages: string[];
     instagramAccount: {
       id: string;
       instagramId: string;
@@ -245,9 +251,17 @@ async function sweepCampaign({
       select: {
         commentId: true, status: true, attempts: true, errorMessage: true,
         dmDeliveryUnconfirmed: true, publicReplySentAt: true,
-        publicReplyDeliveryUnconfirmed: true,
+        publicReplyDeliveryUnconfirmed: true, jevDecision: true,
       },
     });
+    // OPI: com o portão ligado, a resposta pública só sai com a DM SENT e só com a frase aprovada.
+    // Sem DM SENT, ou sem a frase no pool, não há resposta pública pendente: não re-enfileirar.
+    // Também SENT com decisão do Jev diferente de "enviar": a resposta pública foi segurada para revisão.
+    const semRespostaPossivel = (status: string, jevDecision: string | null) => respostaPublicaSoAposDm() && (
+      status !== "SENT" || (jevDecision !== null && jevDecision !== "enviar") ||
+      filtrarRespostaPublica(automation.publicReplyMessages.length > 0
+        ? automation.publicReplyMessages
+        : automation.publicReplyMessage ? [automation.publicReplyMessage] : []).length === 0);
     const handledSet = new Set(logs.filter((log) => {
       // OPI: segurado pelo portão do Jev = tratado (só sai por ação manual).
       if (log.status === "HELD_FOR_REVIEW") return true;
@@ -255,7 +269,7 @@ async function sweepCampaign({
         log.dmDeliveryUnconfirmed || log.attempts >= MAX_COMMENT_SEND_ATTEMPTS ||
         (log.status === "FAILED" && hasLegacyUnconfirmedDelivery(log.errorMessage));
       const replyStopped = !automation.publicReplyEnabled ||
-        log.publicReplySentAt || log.publicReplyDeliveryUnconfirmed;
+        log.publicReplySentAt || log.publicReplyDeliveryUnconfirmed || semRespostaPossivel(log.status, log.jevDecision);
       return dmStopped && replyStopped;
     }).map((log) => log.commentId));
 
@@ -278,6 +292,7 @@ async function sweepCampaign({
         commentText: c.text ?? "",
         commenterId: c.from!.id,
         commenterName: c.from?.username,
+        commentTimestamp: c.timestamp,
         mediaId,
         // When the sweep is looking at an ad, the campaign is bound to the post
         // the ad was made from: without this the worker matches nothing and

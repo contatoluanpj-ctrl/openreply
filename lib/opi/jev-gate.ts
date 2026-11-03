@@ -73,8 +73,13 @@ export function gateLigado(env: Env = process.env): boolean {
   const v = String(env.OPI_JEV_GATE ?? "").trim().toLowerCase();
   return !["off", "false", "0", "nao", "não", "desligado"].includes(v);
 }
+// Ligada por padrão quando o portão está ligado: só "false" explícito desliga (variável esquecida no deploy
+// não pode sumir com a conferência da Compliance, PARECER §8.2-4).
 export function pausaPrimeiraDmLigada(env: Env = process.env): boolean {
-  return String(env.OPI_PAUSE_AFTER_FIRST_DM ?? "").trim().toLowerCase() === "true";
+  const v = String(env.OPI_PAUSE_AFTER_FIRST_DM ?? "").trim().toLowerCase();
+  if (v === "true") return true;
+  if (v === "false") return false;
+  return gateLigado(env);
 }
 
 // ---- Casamento ----
@@ -324,14 +329,37 @@ const ROTULO: Record<string, string> = {
   manual_texto_extra: "texto além da palavra", campanha_pausada: "campanha pausada",
 };
 
-export function mensagemTelegram(x: { campanha: string; usuario: string | null; texto: string; decisao: string; motivo: string; origem: "comentário" | "DM" }): string {
-  const t = String(x.texto ?? "");
-  const trecho = t.length > 200 ? t.slice(0, 200) + "…" : t;
+// Mascara o que pode ser dado pessoal antes de o texto sair do Instagram (PARECER §3.3): e-mail, links e
+// sequências de 4+ dígitos (CPF, conta, telefone).
+export function mascararTexto(texto: unknown): string {
+  const t = String(texto ?? "")
+    .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "[e-mail]")
+    .replace(/https?:\/\/\S+/gi, "[link]")
+    .replace(/\d[\d.\-/ ]*\d/g, (m) => (m.replace(/\D/g, "").length >= 4 ? "[número]" : m));
+  return t.length > 200 ? t.slice(0, 200) + "…" : t;
+}
+
+// Com sinal de dado pessoal ou caso de Compliance, o texto não vai ao Telegram: só o id do comentário.
+export function omitirTexto(decisao: string, p: Partial<Probabilidades> | null | undefined): boolean {
+  const dp = p?.dado_pessoal;
+  return decisao === "compliance" || (typeof dp === "number" && dp >= LIMIARES.dado_pessoal);
+}
+
+export function mensagemTelegram(x: {
+  campanha: string; usuario: string | null; texto: string; decisao: string; motivo: string; origem: "comentário" | "DM";
+  commentId?: string; p?: Partial<Probabilidades> | null;
+  // A DM já tinha saído (log SENT): só a resposta pública foi segurada.
+  dmJaEnviada?: boolean;
+}): string {
   const linhas = [
-    `OpenReply OPI: ${x.origem} segurado, nada foi enviado (nem DM nem resposta pública).`,
+    x.dmJaEnviada
+      ? `OpenReply OPI: ${x.origem} segurado. A DM já tinha sido enviada antes; só a resposta pública foi segurada.`
+      : `OpenReply OPI: ${x.origem} segurado, nada foi enviado (nem DM nem resposta pública).`,
     `Campanha: ${x.campanha}`,
     `Usuário: @${x.usuario || "desconhecido"}`,
-    `Texto: ${trecho}`,
+    omitirTexto(x.decisao, x.p)
+      ? `Texto: omitido (possível dado pessoal). Veja no Instagram${x.commentId ? `, comentário ${x.commentId}` : ""}.`
+      : `Texto: ${mascararTexto(x.texto)}`,
     `Decisão: ${ROTULO[x.decisao] ?? x.decisao}`,
     `Motivo: ${x.motivo}`,
   ];
@@ -341,9 +369,22 @@ export function mensagemTelegram(x: { campanha: string; usuario: string | null; 
 
 export function mensagemPausa(x: { campanha: string; usuario: string | null }): string {
   return [
-    `OpenReply OPI: 1ª DM da campanha "${x.campanha}" (para @${x.usuario || "desconhecido"}).`,
-    "A campanha foi PAUSADA (isActive=false) antes do envio, para a Compliance conferir texto, aviso e link (PARECER §8.2-4).",
+    `OpenReply OPI: 1ª DM da campanha "${x.campanha}" ENVIADA (para @${x.usuario || "desconhecido"}).`,
+    "A campanha foi PAUSADA (isActive=false) para a Compliance conferir texto, aviso e link desta DM (PARECER §8.2-4).",
     "As próximas DMs não saem até você reativar a campanha no painel.",
+  ].join("\n");
+}
+
+export function mensagemPrimeiraDmFalhou(x: { campanha: string; usuario: string | null; incerta?: boolean }): string {
+  if (x.incerta) {
+    return [
+      `OpenReply OPI: a entrega da 1ª DM da campanha "${x.campanha}" (para @${x.usuario || "desconhecido"}) NÃO foi confirmada.`,
+      "Ela pode ter saído. A campanha ficou PAUSADA: confira no Instagram (Direct) antes de levar à Compliance ou reativar.",
+    ].join("\n");
+  }
+  return [
+    `OpenReply OPI: a 1ª DM da campanha "${x.campanha}" (para @${x.usuario || "desconhecido"}) NÃO saiu.`,
+    "A campanha ficou PAUSADA e não há DM para a Compliance conferir. Veja o erro em Logs; reative a campanha para tentar com o próximo comentário.",
   ].join("\n");
 }
 
@@ -351,23 +392,37 @@ export type TelegramFetch = (url: string, init: { method: string; headers: Recor
   Promise<{ ok: boolean; status: number }>;
 
 // Falha no Telegram nunca derruba o job: devolve false e registra só o status (o token nunca vai ao log).
-export async function avisarTelegram(texto: string, env: Env, fetchImpl: TelegramFetch): Promise<boolean> {
+// Um 429 (limite do Telegram) ganha uma nova tentativa depois de uma espera curta.
+export async function avisarTelegram(
+  texto: string,
+  env: Env,
+  fetchImpl: TelegramFetch,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+): Promise<boolean> {
   const token = (env.OPI_TELEGRAM_BOT_TOKEN ?? "").trim();
   const chatId = (env.OPI_TELEGRAM_CHAT_ID ?? "").trim();
-  if (!token || !chatId) return false;
-  try {
-    const res = await fetchImpl(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: texto.slice(0, 4000), disable_web_page_preview: true }),
-      signal: typeof AbortSignal !== "undefined" && "timeout" in AbortSignal ? AbortSignal.timeout(10_000) : undefined,
-    });
-    if (!res.ok) console.error(`[OPI Jev] Aviso no Telegram falhou (HTTP ${res.status})`);
-    return res.ok;
-  } catch (e) {
-    console.error("[OPI Jev] Aviso no Telegram falhou:", e instanceof Error ? e.name : "erro");
+  if (!token || !chatId) {
+    console.error("[OPI Jev] Aviso no Telegram não enviado: OPI_TELEGRAM_BOT_TOKEN/OPI_TELEGRAM_CHAT_ID ausentes");
     return false;
   }
+  for (let tentativa = 1; tentativa <= 2; tentativa++) {
+    try {
+      const res = await fetchImpl(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: texto.slice(0, 4000), disable_web_page_preview: true }),
+        signal: typeof AbortSignal !== "undefined" && "timeout" in AbortSignal ? AbortSignal.timeout(10_000) : undefined,
+      });
+      if (res.ok) return true;
+      console.error(`[OPI Jev] Aviso no Telegram falhou (HTTP ${res.status})`);
+      if (res.status !== 429 || tentativa === 2) return false;
+      await sleep(3_000);
+    } catch (e) {
+      console.error("[OPI Jev] Aviso no Telegram falhou:", e instanceof Error ? e.name : "erro");
+      return false;
+    }
+  }
+  return false;
 }
 
 // ---- Pausa da 1ª DM (§8.2-4) ----
@@ -376,17 +431,118 @@ export type DbPausa = {
     count: (args: { where: { id: string; isActive: boolean } }) => Promise<number>;
     updateMany: (args: { where: { id: string; isActive: boolean }; data: { isActive: boolean } }) => Promise<{ count: number }>;
   };
-  dmLog: { count: (args: { where: { automationId: string; status: "SENT" } }) => Promise<number> };
+  dmLog: { count: (args: { where: { automationId: string; status: "SENT"; dmTemplateHash?: string } }) => Promise<number> };
 };
 
-// "normal": já houve DM SENT e a campanha segue ativa → envia.
-// "primeira": esta é a 1ª DM; a campanha acabou de ser desativada atomicamente por ESTE job → envia só esta.
-// "pausada": a campanha está inativa (outro job pegou a 1ª, ou o Luan ainda não reativou) → não envia.
-export async function reservarPrimeiraDm(db: DbPausa, automationId: string): Promise<"normal" | "primeira" | "pausada"> {
+// "normal": já houve DM SENT com ESTE texto e a campanha segue ativa → envia.
+// "primeira": 1ª DM deste texto (campanha nova ou troca de fase); a campanha acabou de ser desativada
+//             atomicamente por ESTE job → envia só esta.
+// "pausada": a campanha está inativa (outro job pegou a 1ª, ou o Luan ainda não reativou) → não envia agora.
+export async function reservarPrimeiraDm(db: DbPausa, automationId: string, templateHash?: string): Promise<"normal" | "primeira" | "pausada"> {
   const ativa = await db.automation.count({ where: { id: automationId, isActive: true } });
   if (!ativa) return "pausada";
-  const enviados = await db.dmLog.count({ where: { automationId, status: "SENT" } });
+  const enviados = await db.dmLog.count({
+    where: { automationId, status: "SENT", ...(templateHash ? { dmTemplateHash: templateHash } : {}) },
+  });
   if (enviados > 0) return "normal";
   const r = await db.automation.updateMany({ where: { id: automationId, isActive: true }, data: { isActive: false } });
   return r.count === 1 ? "primeira" : "pausada";
+}
+
+// --- Resposta pública (Luan, 02/11/2026): só a frase aprovada sai, e só depois do portão. ---
+export const FRASE_RESPOSTA_PUBLICA = "Te mandei na DM! 📩";
+
+/** Com o portão ligado, a resposta pública só pode ser a frase aprovada. Qualquer outro texto é descartado. */
+export function respostasPublicasPermitidas(pool: readonly string[], env: Env = process.env): string[] {
+  if (!gateLigado(env)) return [...pool];
+  return pool.some((m) => String(m ?? "").trim() === FRASE_RESPOSTA_PUBLICA) ? [FRASE_RESPOSTA_PUBLICA] : [];
+}
+
+/** Comentário que nenhuma campanha ativa casou (ou DM pausada): não sai nada, o Luan decide. */
+export function mensagemSemCampanha(x: { usuario: string | null; texto: string; midia: string }): string {
+  const trecho = mascararTexto(x.texto);
+  return [
+    "OpenReply OPI: comentário sem campanha ativa que case. Nada foi enviado agora; responda você, se quiser.",
+    "Se era a palavra de uma campanha pausada (1ª DM em conferência ou /pausar_dm), a DM sai sozinha quando a campanha voltar (comentários de até 3 dias).",
+    `Usuário: @${x.usuario || "desconhecido"}`,
+    `Post: ${x.midia}`,
+    `Texto: ${trecho}`,
+  ].join("\n");
+}
+
+// --- Texto da DM (PARECER §3.2 e DM-TEXTOS v1.1): só sai texto aprovado, idêntico, sem extras. ---
+// Fonte: OPI company-os/04-growth/DM-TEXTOS.md v1.1 (fases A e B de JUROS e ERROS). Texto novo entra aqui
+// depois de a Compliance aprovar; o teste confere com docs/opi/campanhas-fase-*.json.
+export const TEXTOS_DM_APROVADOS: readonly string[] = [
+  ["Oi! Aqui está o material de Selic e juros do seu empréstimo: https://opi-opcoes-para-investidores.vercel.app/materiais/juros.pdf?utm_source=instagram&utm_medium=dm&utm_campaign=OPI-REEL-017",
+    "É um material de estudo, com exemplos hipotéticos. Ele explica o mecanismo e os riscos; não diz o que você deve fazer com o seu dinheiro.",
+    "Conteúdo educativo. Não é recomendação individual de investimento."].join("\n"),
+  ["Oi! Aqui está o material de checklist da call: https://opi-opcoes-para-investidores.vercel.app/materiais/erros.pdf?utm_source=instagram&utm_medium=dm&utm_campaign=OPI-REEL-012",
+    "É um material de estudo, com exemplos hipotéticos. Ele explica o mecanismo e os riscos; não diz o que você deve fazer com o seu dinheiro.",
+    "Conteúdo educativo. Não é recomendação individual de investimento."].join("\n"),
+  ["Oi! Aqui está o material de Selic e juros do seu empréstimo: https://opi-opcoes-para-investidores.vercel.app/materiais/juros?utm_source=instagram&utm_medium=dm&utm_campaign=OPI-REEL-017",
+    "O material fica na página da OPI. Para liberar, pedimos só o seu nome; o WhatsApp é opcional. Os detalhes estão na Política de Privacidade.",
+    "É um material de estudo, com exemplos hipotéticos. Ele explica o mecanismo e os riscos; não diz o que você deve fazer com o seu dinheiro.",
+    "Conteúdo educativo. Não é recomendação individual de investimento."].join("\n"),
+  ["Oi! Aqui está o material de checklist da call: https://opi-opcoes-para-investidores.vercel.app/materiais/erros?utm_source=instagram&utm_medium=dm&utm_campaign=OPI-REEL-012",
+    "O material fica na página da OPI. Para liberar, pedimos só o seu nome; o WhatsApp é opcional. Os detalhes estão na Política de Privacidade.",
+    "É um material de estudo, com exemplos hipotéticos. Ele explica o mecanismo e os riscos; não diz o que você deve fazer com o seu dinheiro.",
+    "Conteúdo educativo. Não é recomendação individual de investimento."].join("\n"),
+];
+
+/** Hash do texto da DM como sai (quebras de linha normalizadas). Vai no DmLog de cada envio (§8.2-6). */
+export function hashTemplate(texto: unknown): string {
+  return createHash("sha256").update(String(texto ?? "").replace(/\r\n/g, "\n").trim()).digest("hex").slice(0, 16);
+}
+
+// Cada texto aprovado pertence a uma palavra (o material dele): JUROS só com os textos de juros, ERROS só com os
+// de erros. TERMOS, COBERTA, ESTRATEGIAS, PROTECAO e LIVROS não têm texto aqui: ficam manuais.
+export const PALAVRA_DO_TEXTO: ReadonlyMap<string, string> = new Map(TEXTOS_DM_APROVADOS.map((t) => {
+  const palavra = t.includes("/materiais/juros") ? "JUROS" : t.includes("/materiais/erros") ? "ERROS" : "";
+  return [hashTemplate(t), palavra] as const;
+}).filter(([, palavra]) => palavra));
+
+export type CampanhaConfig = {
+  dmMessage: string;
+  keywords?: readonly string[] | null;
+  matchAnyWord?: boolean | null;
+  matchAnyPost?: boolean | null;
+  pendingNextReel?: boolean | null;
+  postId?: string | null;
+  openingDmEnabled?: boolean | null;
+  requireFollow?: boolean | null;
+  followUpEnabled?: boolean | null;
+  dmTriggerEnabled?: boolean | null;
+  trackedLinks?: readonly unknown[] | null;
+};
+
+/**
+ * Com o portão ligado, a campanha só envia o texto aprovado, literal, do material da própria palavra-chave
+ * (PARECER §3.1 e §8.2-2): uma palavra só (a do texto), presa a um Reel (sem "qualquer post", sem "próximo Reel"
+ * e sem "qualquer palavra"), sem link rastreado (troca a URL), sem DM de abertura, sem exigir seguir (texto
+ * padrão em inglês), sem follow-up e sem gatilho por DM. Campo ausente conta como não conforme.
+ * Devolve null quando está conforme, ou o motivo do bloqueio.
+ */
+export function motivoCampanhaNaoConforme(a: CampanhaConfig): string | null {
+  const palavra = PALAVRA_DO_TEXTO.get(hashTemplate(a.dmMessage));
+  if (!palavra) return "texto da DM diferente do aprovado (DM-TEXTOS v1.1)";
+  const kws = (a.keywords ?? []).map(normalizar).filter(Boolean);
+  if (kws.length !== 1 || kws[0] !== normalizar(palavra)) return `palavra-chave diferente do material do texto (o texto é de ${palavra})`;
+  if (a.matchAnyWord) return "campanha \"qualquer palavra\" (não aprovada)";
+  if (a.matchAnyPost || a.pendingNextReel || !a.postId) return "campanha precisa estar presa a um Reel (sem \"qualquer post\" nem \"próximo Reel\")";
+  if (a.trackedLinks && a.trackedLinks.length > 0) return "link rastreado ligado (troca a URL aprovada)";
+  if (a.openingDmEnabled) return "DM de abertura ligada (texto não aprovado)";
+  if (a.requireFollow) return "\"exigir seguir\" ligado (texto não aprovado)";
+  if (a.followUpEnabled) return "follow-up ligado (PARECER: sem acompanhamento automático)";
+  if (a.dmTriggerEnabled) return "gatilho por DM/Story ligado (não aprovado)";
+  return null;
+}
+
+// --- Janela do comentário (PARECER §8.2-3): só comentários de até 7 dias recebem DM automática. ---
+export const JANELA_DIAS = 7;
+export function foraDaJanela(timestamp: string | null | undefined, agora: Date = new Date()): boolean {
+  if (!timestamp) return false; // webhook: chega na hora
+  const t = Date.parse(timestamp);
+  if (!Number.isFinite(t)) return false;
+  return agora.getTime() - t > JANELA_DIAS * 24 * 3600 * 1000;
 }

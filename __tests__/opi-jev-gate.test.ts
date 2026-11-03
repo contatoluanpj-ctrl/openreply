@@ -1,6 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   CHAVES,
+  FRASE_RESPOSTA_PUBLICA,
+  TEXTOS_DM_APROVADOS,
+  foraDaJanela,
+  hashTemplate,
+  mascararTexto,
+  motivoCampanhaNaoConforme,
+  omitirTexto,
+  respostasPublicasPermitidas,
+  mensagemSemCampanha,
   JEV_TENTATIVAS,
   LIMIARES,
   PERGUNTAS,
@@ -231,11 +242,14 @@ describe("ledger e aviso", () => {
   });
 
   it("mensagem do Telegram trunca o comentário em 200 caracteres", () => {
-    const m = mensagemTelegram({ campanha: "Juros", usuario: "fulano", texto: "a".repeat(300), decisao: "compliance", motivo: "x", origem: "comentário" });
+    const m = mensagemTelegram({ campanha: "Juros", usuario: "fulano", texto: "a".repeat(300), decisao: "luan", motivo: "x", origem: "comentário" });
     expect(m).toContain("@fulano");
     expect(m).toContain("a".repeat(200) + "…");
     expect(m).not.toContain("a".repeat(201));
-    expect(m).toContain("Compliance");
+    const c = mensagemTelegram({ campanha: "Juros", usuario: "fulano", texto: "segredo", decisao: "compliance", motivo: "x", origem: "comentário", commentId: "c9" });
+    expect(c).toContain("Compliance");
+    expect(c).not.toContain("segredo");
+    expect(c).toContain("c9");
   });
 
   it("Telegram: sem variáveis não chama; erro nunca lança", async () => {
@@ -258,8 +272,10 @@ describe("interruptores", () => {
     expect(gateLigado({ OPI_JEV_GATE: "on" })).toBe(true);
     expect(gateLigado({ OPI_JEV_GATE: "off" })).toBe(false);
     expect(gateLigado({ OPI_JEV_GATE: "OFF" })).toBe(false);
-    expect(pausaPrimeiraDmLigada({})).toBe(false);
+    expect(pausaPrimeiraDmLigada({})).toBe(true);
     expect(pausaPrimeiraDmLigada({ OPI_PAUSE_AFTER_FIRST_DM: "true" })).toBe(true);
+    expect(pausaPrimeiraDmLigada({ OPI_PAUSE_AFTER_FIRST_DM: "false" })).toBe(false);
+    expect(pausaPrimeiraDmLigada({ OPI_JEV_GATE: "off" })).toBe(false);
   });
 });
 
@@ -300,5 +316,86 @@ describe("pausa da 1ª DM (reservarPrimeiraDm)", () => {
     const d = db({ ativa: true, enviados: 1 });
     expect(await reservarPrimeiraDm(d, "a1")).toBe("normal");
     expect(d.automation.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("resposta pública permitida", () => {
+  it("só a frase aprovada passa com o portão ligado", () => {
+    expect(FRASE_RESPOSTA_PUBLICA).toBe("Te mandei na DM! 📩");
+    expect(respostasPublicasPermitidas(["Te mandei na DM! 📩"], {})).toEqual(["Te mandei na DM! 📩"]);
+    expect(respostasPublicasPermitidas(["  Te mandei na DM! 📩 ", "outra"], {})).toEqual(["Te mandei na DM! 📩"]);
+    expect(respostasPublicasPermitidas(["Te mandei na DM!"], {})).toEqual([]);
+    expect(respostasPublicasPermitidas(["Te mandei na DM, {username}! 📩"], {})).toEqual([]);
+    expect(respostasPublicasPermitidas([], {})).toEqual([]);
+  });
+  it("portão desligado mantém o pool original", () => {
+    expect(respostasPublicasPermitidas(["qualquer"], { OPI_JEV_GATE: "off" })).toEqual(["qualquer"]);
+  });
+  it("aviso de sem campanha corta o texto em 200 caracteres", () => {
+    const m = mensagemSemCampanha({ usuario: null, texto: "a".repeat(300), midia: "m1" });
+    expect(m).toContain("@desconhecido");
+    expect(m).toContain("a".repeat(200) + "…");
+    expect(m).not.toContain("a".repeat(201));
+  });
+});
+
+describe("achados do fiscal: texto aprovado, janela, máscara", () => {
+  it("os textos aprovados são os mesmos dos arquivos de campanha (fases A e B)", () => {
+    const doArquivo = ["a", "b"].flatMap((f) =>
+      JSON.parse(readFileSync(join(__dirname, "..", "docs", "opi", `campanhas-fase-${f}.json`), "utf8")).campaigns.map((c: { dmMessage: string }) => c.dmMessage));
+    expect(new Set(doArquivo.map(hashTemplate))).toEqual(new Set(TEXTOS_DM_APROVADOS.map(hashTemplate)));
+    for (const t of TEXTOS_DM_APROVADOS) expect(t.endsWith("Conteúdo educativo. Não é recomendação individual de investimento.")).toBe(true);
+  });
+
+  it("campanha conforme só com texto aprovado, da própria palavra, presa a um Reel e sem extras", () => {
+    const ok = { dmMessage: TEXTOS_DM_APROVADOS[1], keywords: ["ERROS"], postId: "m1" };
+    expect(motivoCampanhaNaoConforme(ok)).toBeNull();
+    expect(motivoCampanhaNaoConforme({ ...ok, keywords: ["erros"] })).toBeNull();
+    expect(motivoCampanhaNaoConforme({ ...ok, dmMessage: TEXTOS_DM_APROVADOS[1].replace(/\n/g, "\r\n") })).toBeNull();
+    expect(motivoCampanhaNaoConforme({ ...ok, dmMessage: TEXTOS_DM_APROVADOS[1] + " " + "!" })).toMatch(/texto/);
+    expect(motivoCampanhaNaoConforme({ ...ok, keywords: ["JUROS"] })).toMatch(/palavra-chave/);
+    expect(motivoCampanhaNaoConforme({ ...ok, keywords: ["TERMOS"] })).toMatch(/palavra-chave/);
+    expect(motivoCampanhaNaoConforme({ ...ok, keywords: ["ERROS", "ERRO"] })).toMatch(/palavra-chave/);
+    expect(motivoCampanhaNaoConforme({ dmMessage: TEXTOS_DM_APROVADOS[1], postId: "m1" })).toMatch(/palavra-chave/);
+    expect(motivoCampanhaNaoConforme({ ...ok, matchAnyWord: true })).toMatch(/qualquer palavra/);
+    expect(motivoCampanhaNaoConforme({ ...ok, matchAnyPost: true })).toMatch(/Reel/);
+    expect(motivoCampanhaNaoConforme({ ...ok, pendingNextReel: true })).toMatch(/Reel/);
+    expect(motivoCampanhaNaoConforme({ ...ok, postId: null })).toMatch(/Reel/);
+    expect(motivoCampanhaNaoConforme({ ...ok, trackedLinks: [{}] })).toMatch(/link/);
+    expect(motivoCampanhaNaoConforme({ ...ok, openingDmEnabled: true })).toMatch(/abertura/);
+    expect(motivoCampanhaNaoConforme({ ...ok, requireFollow: true })).toMatch(/seguir/);
+    expect(motivoCampanhaNaoConforme({ ...ok, followUpEnabled: true })).toMatch(/follow-up/);
+    expect(motivoCampanhaNaoConforme({ ...ok, dmTriggerEnabled: true })).toMatch(/gatilho/);
+  });
+
+  it("janela de 7 dias", () => {
+    const agora = new Date("2026-11-10T12:00:00Z");
+    expect(foraDaJanela(null, agora)).toBe(false);
+    expect(foraDaJanela("2026-11-03T12:00:01Z", agora)).toBe(false);
+    expect(foraDaJanela("2026-11-03T11:59:59Z", agora)).toBe(true);
+    expect(foraDaJanela("lixo", agora)).toBe(false);
+  });
+
+  it("máscara de dado pessoal e omissão do texto", () => {
+    expect(mascararTexto("cpf 123.456.789-00 e ana@x.com, ver https://a.b/c")).toBe("cpf [número] e [e-mail], ver [link]");
+    expect(mascararTexto("tenho 2 dúvidas sobre 30 dias")).toBe("tenho 2 dúvidas sobre 30 dias");
+    expect(omitirTexto("compliance", null)).toBe(true);
+    expect(omitirTexto("luan", { dado_pessoal: 0.05 })).toBe(true);
+    expect(omitirTexto("luan", { dado_pessoal: 0.04 })).toBe(false);
+  });
+
+  it("Telegram: 429 ganha uma nova tentativa", async () => {
+    const f = vi.fn().mockResolvedValueOnce({ ok: false, status: 429 }).mockResolvedValueOnce({ ok: true, status: 200 });
+    const env = { OPI_TELEGRAM_BOT_TOKEN: "t", OPI_TELEGRAM_CHAT_ID: "1" };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await avisarTelegram("oi", env, f, async () => {})).toBe(true);
+    expect(f).toHaveBeenCalledTimes(2);
+  });
+
+  it("pausa da 1ª DM conta só envios do mesmo texto", async () => {
+    const count = vi.fn(async () => 0);
+    const d = { automation: { count: vi.fn(async () => 1), updateMany: vi.fn(async () => ({ count: 1 })) }, dmLog: { count } };
+    expect(await reservarPrimeiraDm(d, "a1", "h1")).toBe("primeira");
+    expect(count).toHaveBeenCalledWith({ where: { automationId: "a1", status: "SENT", dmTemplateHash: "h1" } });
   });
 });

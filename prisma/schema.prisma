@@ -265,6 +265,9 @@ model DmLog {
   jevDecision String?
   jevReason   String?
   jevScores   Json?
+  // OPI: hash do texto da DM que saiu (lib/opi/jev-gate.ts hashTemplate), para provar o template de cada
+  // envio (PARECER §8.2-6) e pausar a 1ª DM de cada texto/fase (§8.2-4).
+  dmTemplateHash String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -399,6 +402,8 @@ model OperationalEvent {
   @@index([source])
   @@index([level])
   @@index([createdAt])
+  // OPI: freio (último opi.freio.*) e reenvio de avisos consultam por message + createdAt.
+  @@index([message, createdAt])
 }
 
 enum WorkspaceRole {

@@ -1,0 +1,35 @@
+{
+  "_fonte": "OPI company-os/04-growth/DM-TEXTOS.md v1.1 (texto literal; não editar aqui)",
+  "_uso": "Trocar <MEDIA_ID_...> pelo id do Reel publicado e <INSTAGRAM_ACCOUNT_ID> pelo id da conta no OpenReply; importar em /campaigns/import. isActive=false: só ativa com o sim do Luan.",
+  "instagramAccountId": "<INSTAGRAM_ACCOUNT_ID>",
+  "campaigns": [
+    {
+      "postId": "<MEDIA_ID_OPI-REEL-017>",
+      "postUrl": null,
+      "keywords": [
+        "JUROS"
+      ],
+      "dmMessage": "Oi! Aqui está o material de Selic e juros do seu empréstimo: https://opi-opcoes-para-investidores.vercel.app/materiais/juros?utm_source=instagram&utm_medium=dm&utm_campaign=OPI-REEL-017\nO material fica na página da OPI. Para liberar, pedimos só o seu nome; o WhatsApp é opcional. Os detalhes estão na Política de Privacidade.\nÉ um material de estudo, com exemplos hipotéticos. Ele explica o mecanismo e os riscos; não diz o que você deve fazer com o seu dinheiro.\nConteúdo educativo. Não é recomendação individual de investimento.",
+      "name": "OPI JUROS (REEL-017) fase B",
+      "goal": "Entregar o material de Selic e juros do seu empréstimo",
+      "publicReplyMessage": "Te mandei na DM! 📩",
+      "trackedUrl": null,
+      "wholeWordMatch": true,
+      "isActive": false
+    },
+    {
+      "postId": "<MEDIA_ID_OPI-REEL-012>",
+      "postUrl": null,
+      "keywords": [
+        "ERROS"
+      ],
+      "dmMessage": "Oi! Aqui está o material de checklist da call: https://opi-opcoes-para-investidores.vercel.app/materiais/erros?utm_source=instagram&utm_medium=dm&utm_campaign=OPI-REEL-012\nO material fica na página da OPI. Para liberar, pedimos só o seu nome; o WhatsApp é opcional. Os detalhes estão na Política de Privacidade.\nÉ um material de estudo, com exemplos hipotéticos. Ele explica o mecanismo e os riscos; não diz o que você deve fazer com o seu dinheiro.\nConteúdo educativo. Não é recomendação individual de investimento.",
+      "name": "OPI ERROS (REEL-012) fase B",
+      "goal": "Entregar o material de checklist da call",
+      "publicReplyMessage": "Te mandei na DM! 📩",
+      "trackedUrl": null,
+      "wholeWordMatch": true,
+      "isActive": false
+    }
+  ]
+}

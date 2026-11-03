@@ -1,6 +1,7 @@
 import { createDMWorker } from "@/lib/queue/dm-worker";
 import { recordWorkerHeartbeat } from "@/lib/ops/worker-health";
 import { reconcileComments } from "@/lib/polling/comment-reconciler";
+import { reenviarAvisosPendentes } from "@/lib/opi/jev-worker";
 import { attachPendingNextReels } from "@/lib/automation/attach-next-reel";
 import os from "node:os";
 
@@ -41,6 +42,13 @@ async function poll() {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("[DM Worker] Comment reconciliation failed:", message);
+  }
+  // OPI: avisos do Telegram que falharam ou foram suprimidos saem de novo aqui, até serem entregues.
+  try {
+    const r = await reenviarAvisosPendentes();
+    if (r.reenviados > 0) console.log("[DM Worker] OPI: avisos reenviados:", r.reenviados);
+  } catch (error) {
+    console.error("[DM Worker] OPI: reenvio de avisos falhou:", error instanceof Error ? error.name : "erro");
   }
 }
 
