@@ -13,7 +13,10 @@ const ITENS = [
   { titulo: "## 09/11 — 23 PUT", video: "9ba33d8b1152fc33edbfe687.mp4", quando: "2026-11-09T21:00:00.000Z" },
   { titulo: "## 10/11 — 09 BINÁRIA", video: "6e4ddbc2c293c1fcf8884270.mp4", quando: "2026-11-10T21:00:00.000Z" },
   { titulo: "## 11/11 — 08 INGRESSO", video: "5fb8489ac90e72e8f527ca2f.mp4", quando: "2026-11-11T21:00:00.000Z" },
+  { titulo: "## 12/11 — 07 JUROS", video: "a6f1ff7ff20d0631b8ef200c.mp4", quando: "2026-11-12T21:00:00.000Z" },
+  { titulo: "## 13/11 — 13 CHECKLIST", video: "c79f4266603c62e4827538bd.mp4", quando: "2026-11-13T21:00:00.000Z" },
   { titulo: "## 14/11 — 21 APOSTA", video: "5adbb46f92404cd23cbd2b6e.mp4", quando: "2026-11-14T21:00:00.000Z" },
+  { titulo: "## 15/11 — 19 VENCIMENTO", video: "24f50803278f136675be2548.mp4", quando: "2026-11-15T21:00:00.000Z" },
 ];
 
 function legenda(md: string, titulo: string): string {
