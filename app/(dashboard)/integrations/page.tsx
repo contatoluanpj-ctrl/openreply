@@ -72,7 +72,7 @@ export default function IntegrationsPage() {
     <section className="space-y-3">{keys.map(key => <div key={key.id} className="rounded border border-border p-4">
       <strong>{key.name}</strong>
       <p className="text-sm">campaigns:read · {t("Expires: {date}", { date: new Date(key.expiresAt).toLocaleDateString(locale) })}</p>
-      {key.revokedAt ? <span>{t("Revoked")}</span> : <button disabled={busy} onClick={() => revoke(key)} className="text-red-500">{t("Revoke key")}</button>}
+      {key.revokedAt ? <span>{t("Revoked")}</span> : <button disabled={busy} onClick={() => revoke(key)} className="text-error">{t("Revoke key")}</button>}
     </div>)}</section>
     <section className="space-y-2 text-sm">
       <h2 className="font-semibold">{t("Connection")}</h2>

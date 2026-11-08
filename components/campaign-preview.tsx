@@ -103,7 +103,7 @@ function renderMessage(text: string, hasLink: boolean, linkUrl: string | undefin
         key={i}
         className={
           linkUrl || hasLink
-            ? "text-sky-400 underline break-all"
+            ? "text-foreground underline break-all"
             : "text-zinc-500 italic"
         }
       >

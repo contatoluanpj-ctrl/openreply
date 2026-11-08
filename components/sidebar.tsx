@@ -1,28 +1,71 @@
 "use client";
 
 /**
- * Sidebar Navigation
+ * Sidebar do OPI Central
  *
- * Text-only nav with active state and workspace section.
+ * Navegação em grupos (Visão geral, Marketing, Financeiro, Operações, Equipe),
+ * rótulos em português e tema preto/branco/cinza herdado de .opi-central.
  */
 
-import LanguageSwitcher from "@/components/language-switcher";
-import { useI18n } from "@/lib/i18n/provider";
 import Link from "next/link";
-import Image from "next/image";
-import { zernioLink } from "@/lib/zernio-links";
 import { usePathname } from "next/navigation";
+import { zernioLink } from "@/lib/zernio-links";
 
-const navItems = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Overview", href: "/overview" },
-  { label: "Inbox", href: "/inbox" },
-  { label: "Campaigns", href: "/campaigns" },
-  { label: "DM Logs", href: "/logs" },
-  { label: "Settings", href: "/settings" },
-  { label: "API & MCP", href: "/integrations" },
-  { label: "Diagnostics", href: "/diagnostics" },
-] as const;
+interface NavItem {
+  label: string;
+  href: string;
+  /** Só marca ativo no caminho exato (ex.: /dashboard, que é prefixo das páginas novas). */
+  exact?: boolean;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    label: "Visão geral",
+    items: [
+      { label: "Resumo", href: "/dashboard/visao-geral" },
+      { label: "Painel do Instagram", href: "/dashboard", exact: true },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      { label: "Redes", href: "/dashboard/redes" },
+      { label: "Palavras-chave", href: "/dashboard/palavras" },
+      { label: "Campanhas", href: "/campaigns" },
+      { label: "Caixa de entrada", href: "/inbox" },
+      { label: "Registro de DMs", href: "/logs" },
+      { label: "Calendário", href: "/dashboard/calendario" },
+    ],
+  },
+  {
+    label: "Financeiro",
+    items: [{ label: "Financeiro", href: "/dashboard/financeiro" }],
+  },
+  {
+    label: "Operações",
+    items: [
+      { label: "Automações", href: "/automations" },
+      { label: "Diagnóstico", href: "/diagnostics" },
+      { label: "API e MCP", href: "/integrations" },
+      { label: "Seguidores", href: "/overview" },
+      { label: "Configurações", href: "/settings" },
+    ],
+  },
+  {
+    label: "Equipe",
+    items: [{ label: "Agentes", href: "/dashboard/agentes" }],
+  },
+];
+
+export function isNavItemActive(item: NavItem, pathname: string): boolean {
+  if (item.exact) return pathname === item.href;
+  return pathname === item.href || pathname.startsWith(item.href + "/");
+}
 
 interface SidebarProps {
   isOpen: boolean;
@@ -35,12 +78,11 @@ export default function Sidebar({
   onClose,
   workspaceName,
 }: SidebarProps) {
-  const { t } = useI18n();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Fundo escurecido no celular */}
       {isOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/60 lg:hidden"
@@ -56,60 +98,80 @@ export default function Sidebar({
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
-        {/* Same reason as the top bar: the drawer is full height, so the
-            wordmark would otherwise land under the status bar. */}
+        {/* A gaveta ocupa a altura toda; sem o recuo a marca ficaria sob a barra de status. */}
         <div
           className="px-6 py-5 border-b border-border"
           style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top))" }}
         >
-          <Link href="/dashboard" className="text-base font-semibold">
-            OpenReply
+          <Link
+            href="/dashboard/visao-geral"
+            onClick={onClose}
+            className="flex items-center gap-3 text-foreground"
+          >
+            <span
+              aria-hidden="true"
+              className="block h-6 w-[54px] shrink-0 bg-foreground"
+              style={{
+                WebkitMaskImage: "url(/opi-logo.svg)",
+                maskImage: "url(/opi-logo.svg)",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+                WebkitMaskPosition: "left center",
+                maskPosition: "left center",
+              }}
+            />
+            <span className="text-base font-semibold">OPI Central</span>
           </Link>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                aria-current={isActive ? "page" : undefined}
-                className={`
-                  block px-3 py-2.5 rounded text-sm
-                  ${
-                    isActive
-                      ? "bg-surface-hover text-foreground font-medium"
-                      : "text-muted hover:text-foreground hover:bg-surface-hover"
-                  }
-                `}
-              >
-                {t(item.label)}
-              </Link>
-            );
-          })}
+        <nav
+          aria-label="Navegação do painel"
+          className="flex-1 px-3 py-4 space-y-5 overflow-y-auto"
+        >
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label}>
+              <p className="px-3 pb-1.5 text-xs font-medium uppercase tracking-wide text-muted">
+                {group.label}
+              </p>
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const isActive = isNavItemActive(item, pathname);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`
+                        block px-3 py-2 rounded text-sm
+                        ${
+                          isActive
+                            ? "bg-surface-hover text-foreground font-medium"
+                            : "text-muted hover:text-foreground hover:bg-surface-hover"
+                        }
+                      `}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="px-5 py-4 border-t border-border">
-          <div className="mb-4"><LanguageSwitcher /></div>
           <p className="text-sm text-foreground truncate">{workspaceName}</p>
-          <p className="text-xs text-muted">{t("Self-hosted")}</p>
+          <p className="text-xs text-muted">OPI · Opções para Investidores</p>
           <a
             href={zernioLink({ placement: "sidebar" })}
             target="_blank"
             rel="sponsored noopener noreferrer"
-            className="mt-4 flex items-center gap-3 text-xs text-muted hover:text-foreground"
+            className="mt-3 inline-block text-xs text-muted hover:text-foreground"
           >
-            <span>{t("Supported by")}</span>
-            <Image
-              src="/brand/zernio-primary.svg"
-              alt="Zernio"
-              width={64}
-              height={20}
-              className="m-2"
-            />
+            Apoio: Zernio
           </a>
         </div>
       </aside>

@@ -86,6 +86,10 @@ model Workspace {
   webhookEvents     WebhookEvent[]
   operationalEvents OperationalEvent[]
   serviceKeys       ServiceKey[]
+  redeSnapshots     RedeSnapshot[]
+  pedidosAgente     PedidoAgente[]
+  postsAgendados    PostAgendado[]
+  lancamentos       Lancamento[]
 
   @@index([ownerId])
 }
@@ -489,4 +493,110 @@ model TextoAprovado {
 
   @@unique([workspaceId, palavra])
   @@index([workspaceId, ativo])
+}
+
+/// OPI Central — Redes: último retrato de cada rede (IG, FB, YouTube, TikTok, LinkedIn, X, Threads, Meta Ads,
+/// Google Ads), gravado pelo runner local. Ads: só leitura, nenhum gasto.
+model RedeSnapshot {
+  id          String    @id @default(cuid())
+  workspaceId String
+  rede        String
+  estado      String
+  metricas    Json
+  coletadoEm  DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, rede, coletadoEm])
+}
+
+enum PedidoAgenteStatus {
+  NOVO
+  EM_ANDAMENTO
+  FEITO
+  ERRO
+}
+
+/// OPI Central — Equipe: pedido do painel a um agente; o runner local pega (updateMany atômico) e responde.
+model PedidoAgente {
+  id          String             @id @default(cuid())
+  workspaceId String
+  agente      String
+  mensagem    String
+  status      PedidoAgenteStatus @default(NOVO)
+  resposta    String?
+  anexos      Json?
+  iniciadoEm  DateTime?
+  concluidoEm DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  workspace   Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, status, createdAt])
+  @@index([workspaceId, agente, createdAt])
+}
+
+enum PostTipo {
+  CARROSSEL
+  REEL
+  POST
+}
+
+enum PostStatus {
+  RASCUNHO
+  APROVADO
+  PUBLICANDO
+  PUBLICADO
+  ERRO
+}
+
+/// OPI Central — Calendário: só sai o que o Luan aprovou (D-0026); a legenda leva o aviso obrigatório.
+model PostAgendado {
+  id           String     @id @default(cuid())
+  workspaceId  String
+  tipo         PostTipo
+  midias       Json
+  legenda      String
+  agendadoPara DateTime
+  status       PostStatus @default(RASCUNHO)
+  aprovadoEm   DateTime?
+  aprovadoPor  String?
+  mediaId      String?
+  permalink    String?
+  erro         String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, status, agendadoPara])
+}
+
+enum LancamentoTipo {
+  RECEITA
+  DESPESA
+}
+
+enum LancamentoStatus {
+  PREVISTO
+  PAGO
+}
+
+/// OPI Central — Financeiro: lançamentos de receita e despesa.
+model Lancamento {
+  id          String           @id @default(cuid())
+  workspaceId String
+  data        DateTime
+  tipo        LancamentoTipo
+  categoria   String
+  descricao   String
+  valor       Decimal          @db.Decimal(12, 2)
+  status      LancamentoStatus @default(PREVISTO)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, data])
 }
