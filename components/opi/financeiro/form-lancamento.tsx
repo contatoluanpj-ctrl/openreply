@@ -4,7 +4,20 @@ import { useState, type FormEvent } from "react";
 import type { LancamentoJson, Status, Tipo } from "@/lib/opi/financeiro";
 
 const CAMPO =
-  "w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-border-hover focus:outline-none";
+  "h-10 w-full rounded-xl border border-border bg-white/70 px-3.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20";
+const ROTULO = "grid gap-1.5 text-[11px] font-semibold uppercase tracking-[.1em] text-muted";
+
+function Seg<T extends string>({ valor, opcoes, onChange, rotulo }: { valor: T; opcoes: [T, string][]; onChange: (v: T) => void; rotulo: string }) {
+  return (
+    <div className="opi-seg w-fit normal-case tracking-normal" role="group" aria-label={rotulo}>
+      {opcoes.map(([v, nome]) => (
+        <button key={v} type="button" aria-pressed={valor === v} onClick={() => onChange(v)}>
+          {nome}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export interface FormLancamentoProps {
   /** Quando vier, o formulário edita esse lançamento (PATCH); senão cria (POST). */
@@ -57,26 +70,20 @@ export function FormLancamento({ editando, onSalvo, onCancelar }: FormLancamento
   }
 
   return (
-    <form onSubmit={enviar} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      <label className="grid gap-1 text-xs text-muted">
+    <form onSubmit={enviar} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <label className={ROTULO}>
         Data
         <input type="date" required value={data} onChange={(e) => setData(e.target.value)} className={CAMPO} />
       </label>
-      <label className="grid gap-1 text-xs text-muted">
+      <div className={ROTULO}>
         Tipo
-        <select value={tipo} onChange={(e) => setTipo(e.target.value as Tipo)} className={CAMPO}>
-          <option value="DESPESA">Despesa</option>
-          <option value="RECEITA">Receita</option>
-        </select>
-      </label>
-      <label className="grid gap-1 text-xs text-muted">
+        <Seg rotulo="Tipo" valor={tipo} onChange={setTipo} opcoes={[["DESPESA", "Despesa"], ["RECEITA", "Receita"]]} />
+      </div>
+      <div className={ROTULO}>
         Status
-        <select value={status} onChange={(e) => setStatus(e.target.value as Status)} className={CAMPO}>
-          <option value="PREVISTO">Previsto</option>
-          <option value="PAGO">Pago</option>
-        </select>
-      </label>
-      <label className="grid gap-1 text-xs text-muted">
+        <Seg rotulo="Status" valor={status} onChange={setStatus} opcoes={[["PREVISTO", "Previsto"], ["PAGO", "Pago"]]} />
+      </div>
+      <label className={ROTULO}>
         Categoria
         <input
           required
@@ -87,7 +94,7 @@ export function FormLancamento({ editando, onSalvo, onCancelar }: FormLancamento
           className={CAMPO}
         />
       </label>
-      <label className="grid gap-1 text-xs text-muted sm:col-span-1 lg:col-span-1">
+      <label className={ROTULO}>
         Descrição
         <input
           required
@@ -98,7 +105,7 @@ export function FormLancamento({ editando, onSalvo, onCancelar }: FormLancamento
           className={CAMPO}
         />
       </label>
-      <label className="grid gap-1 text-xs text-muted">
+      <label className={ROTULO}>
         Valor (R$)
         <input
           required
@@ -113,7 +120,7 @@ export function FormLancamento({ editando, onSalvo, onCancelar }: FormLancamento
         <button
           type="submit"
           disabled={salvando}
-          className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
+          className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground shadow-[0_0_18px_rgba(217,84,30,.4)] hover:bg-accent-hover disabled:opacity-50"
         >
           {salvando ? "Salvando…" : editando ? "Salvar alterações" : "Adicionar lançamento"}
         </button>
@@ -121,7 +128,7 @@ export function FormLancamento({ editando, onSalvo, onCancelar }: FormLancamento
           <button
             type="button"
             onClick={onCancelar}
-            className="rounded-md border border-border px-4 py-2 text-sm text-foreground hover:bg-surface-hover"
+            className="rounded-full border border-border bg-white/50 px-5 py-2.5 text-sm font-semibold text-foreground/80 hover:bg-white/80"
           >
             Cancelar
           </button>
