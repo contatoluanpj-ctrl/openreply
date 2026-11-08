@@ -5,6 +5,7 @@ import { Badge, Card, PageHeader, StatTile } from "@/components/opi";
 import { EstadoBloco, ListaPendencias } from "@/components/opi/visao";
 import { getCurrentWorkspaceId } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
+import { REDES } from "@/lib/opi/redes";
 import {
   LINKS,
   carregarVisaoGeral,
@@ -112,7 +113,7 @@ export default async function VisaoGeralPage() {
                 {redes.map((r) => (
                   <li key={r.rede} className="flex items-center justify-between gap-3 py-2">
                     <span className="min-w-0">
-                      <span className="capitalize text-foreground">{r.rede}</span>
+                      <span className="text-foreground">{REDES.find((x) => x.id === r.rede)?.nome ?? r.rede}</span>
                       <span className="ml-2 text-xs text-muted">{formatarDataHora(r.coletadoEm)}</span>
                     </span>
                     <span className="tabular-nums text-foreground">
