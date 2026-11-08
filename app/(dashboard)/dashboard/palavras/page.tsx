@@ -1,4 +1,5 @@
-import { Badge, Card, PageHeader } from "@/components/opi";
+import { PageHeader } from "@/components/opi";
+import { PalavrasManager } from "@/components/opi/palavras/palavras-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -7,14 +8,9 @@ export default function PalavrasPage() {
     <div>
       <PageHeader
         title="Palavras-chave"
-        description="Palavras que disparam DM, com os textos aprovados pelo Luan."
-        actions={<Badge>Em construção</Badge>}
+        description="Palavras que disparam DM, com os textos aprovados pelo Luan e as campanhas de cada uma."
       />
-      <Card title="Em breve">
-        <p className="text-sm text-muted">
-          Esta página faz parte do OPI Central e ainda está sendo montada.
-        </p>
-      </Card>
+      <PalavrasManager />
     </div>
   );
 }
