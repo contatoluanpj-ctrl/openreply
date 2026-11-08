@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Badge, PageHeader } from "@/components/opi";
-import { Kpi, Pendencias, Plataforma } from "@/components/opi/dashboard/blocos";
+import { Kpi, Pendencias } from "@/components/opi/dashboard/blocos";
 import { brl, numero, pct } from "@/components/opi/dashboard/formato";
 import {
   GraficoAudiencia,
@@ -139,31 +139,6 @@ export default async function DashboardPage() {
           dica={gasto.ok ? `pago em ${mes} · ${brl(gasto.dados.previsto)} previstos` : INDISPONIVEL}
         />
       </section>
-
-      <TituloSecao
-        titulo="Redes"
-        nota="Um card por rede com dados coletados. O número grande é a audiência; a variação compara com 7 dias antes."
-        href={LINKS.redes}
-        link="Abrir redes"
-      />
-      {!d.plataformas.ok ? (
-        <p className="opi-tile text-sm text-muted">
-          {d.plataformas.motivo === "sem_tabela"
-            ? "Tabela das redes ainda não criada no banco (migration do OPI Central pendente)."
-            : "Não foi possível carregar as redes agora. Tente recarregar a página."}
-        </p>
-      ) : d.plataformas.dados.length === 0 ? (
-        <p className="opi-tile text-sm text-muted">
-          Nenhuma rede com dados ainda. Os cards aparecem quando o coletor das Redes enviar o primeiro snapshot ou o
-          Instagram registrar seguidores.
-        </p>
-      ) : (
-        <section aria-label="Redes" className="flex flex-wrap justify-center gap-4">
-          {d.plataformas.dados.map((c) => (
-            <Plataforma key={c.rede} card={c} />
-          ))}
-        </section>
-      )}
 
       <TituloSecao
         titulo="Para decidir"
