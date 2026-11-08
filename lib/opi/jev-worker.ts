@@ -316,9 +316,23 @@ export function respostaPublicaSoAposDm(): boolean {
   return gateLigado();
 }
 
-/** Resposta pública: com o portão ligado, só a frase aprovada (FRASE_RESPOSTA_PUBLICA). */
-export function filtrarRespostaPublica(pool: readonly string[]): string[] {
-  return respostasPublicasPermitidas(pool, process.env);
+/** Resposta pública: com o portão ligado, só a frase padrão ou uma resposta aprovada no painel. */
+export function filtrarRespostaPublica(pool: readonly string[], aprovadas: readonly string[] = []): string[] {
+  return respostasPublicasPermitidas(pool, process.env, aprovadas);
+}
+
+/** Respostas públicas aprovadas no painel (TextoAprovado ativo). Erro de banco = só a frase padrão vale. */
+export async function respostasPublicasAprovadas(workspaceId: string): Promise<string[]> {
+  if (!gateLigado()) return [];
+  try {
+    const linhas = (await prisma.textoAprovado?.findMany({
+      where: { workspaceId, ativo: true },
+      select: { respostaPublica: true },
+    })) ?? [];
+    return linhas.map((l) => l.respostaPublica);
+  } catch {
+    return [];
+  }
 }
 
 /** Comentário que nenhuma campanha ativa casou: avisa o Luan no Telegram. Com o portão desligado, não faz nada. */

@@ -327,6 +327,11 @@ describe("resposta pública permitida", () => {
     expect(respostasPublicasPermitidas(["Te mandei na DM!"], {})).toEqual([]);
     expect(respostasPublicasPermitidas(["Te mandei na DM, {username}! 📩"], {})).toEqual([]);
     expect(respostasPublicasPermitidas([], {})).toEqual([]);
+    // Resposta aprovada no painel (TextoAprovado.respostaPublica) também sai; texto fora da lista, não.
+    const aprovada = "Te enviei no seu Direct 📩. Caso não tenha chegado, dê uma olhada nos pedidos 👀.";
+    expect(respostasPublicasPermitidas([aprovada], {}, [aprovada])).toEqual([aprovada]);
+    expect(respostasPublicasPermitidas([` ${aprovada} `, "outra"], {}, [aprovada])).toEqual([aprovada]);
+    expect(respostasPublicasPermitidas(["outra"], {}, [aprovada])).toEqual([]);
   });
   it("portão desligado mantém o pool original", () => {
     expect(respostasPublicasPermitidas(["qualquer"], { OPI_JEV_GATE: "off" })).toEqual(["qualquer"]);

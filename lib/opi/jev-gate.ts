@@ -452,10 +452,23 @@ export async function reservarPrimeiraDm(db: DbPausa, automationId: string, temp
 // --- Resposta pública (Luan, 02/11/2026): só a frase aprovada sai, e só depois do portão. ---
 export const FRASE_RESPOSTA_PUBLICA = "Te mandei na DM! 📩";
 
-/** Com o portão ligado, a resposta pública só pode ser a frase aprovada. Qualquer outro texto é descartado. */
-export function respostasPublicasPermitidas(pool: readonly string[], env: Env = process.env): string[] {
+/**
+ * Com o portão ligado, a resposta pública só pode ser a frase padrão ou uma resposta aprovada no painel
+ * (TextoAprovado.respostaPublica, ativo). Qualquer outro texto é descartado.
+ */
+export function respostasPublicasPermitidas(
+  pool: readonly string[],
+  env: Env = process.env,
+  aprovadas: readonly string[] = [],
+): string[] {
   if (!gateLigado(env)) return [...pool];
-  return pool.some((m) => String(m ?? "").trim() === FRASE_RESPOSTA_PUBLICA) ? [FRASE_RESPOSTA_PUBLICA] : [];
+  const permitidas = new Set([FRASE_RESPOSTA_PUBLICA, ...aprovadas.map((m) => String(m ?? "").trim()).filter(Boolean)]);
+  const saida: string[] = [];
+  for (const m of pool) {
+    const t = String(m ?? "").trim();
+    if (permitidas.has(t) && !saida.includes(t)) saida.push(t);
+  }
+  return saida;
 }
 
 /** Comentário que nenhuma campanha ativa casou (ou DM pausada): não sai nada, o Luan decide. */

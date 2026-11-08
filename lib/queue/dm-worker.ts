@@ -47,6 +47,7 @@ import {
   avisarPrimeiraDmFalhou,
   envioExtraBloqueado,
   filtrarRespostaPublica,
+  respostasPublicasAprovadas,
   reservarEnvio,
   respostaPublicaLiberada,
   respostaPublicaSoAposDm,
@@ -485,7 +486,8 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
         ? automation.publicReplyMessages
         : automation.publicReplyMessage
           ? [automation.publicReplyMessage]
-          : []
+          : [],
+      await respostasPublicasAprovadas(automation.workspaceId),
     );
     if (
       automation.publicReplyEnabled &&

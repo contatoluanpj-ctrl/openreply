@@ -40,7 +40,7 @@ import {
   type InstagramContext,
 } from "@/lib/instagram/provider";
 import { matchKeywords } from "@/lib/utils/keyword-matcher";
-import { filtrarRespostaPublica, respostaPublicaSoAposDm } from "@/lib/opi/jev-worker";
+import { filtrarRespostaPublica, respostaPublicaSoAposDm, respostasPublicasAprovadas } from "@/lib/opi/jev-worker";
 
 // Only consider comments from the last few days — older ones are outside
 // Instagram's private-reply window anyway, so a DM to them would just fail.
@@ -257,11 +257,12 @@ async function sweepCampaign({
     // OPI: com o portão ligado, a resposta pública só sai com a DM SENT e só com a frase aprovada.
     // Sem DM SENT, ou sem a frase no pool, não há resposta pública pendente: não re-enfileirar.
     // Também SENT com decisão do Jev diferente de "enviar": a resposta pública foi segurada para revisão.
+    const aprovadas = await respostasPublicasAprovadas(account.workspaceId);
     const semRespostaPossivel = (status: string, jevDecision: string | null) => respostaPublicaSoAposDm() && (
       status !== "SENT" || (jevDecision !== null && jevDecision !== "enviar") ||
       filtrarRespostaPublica(automation.publicReplyMessages.length > 0
         ? automation.publicReplyMessages
-        : automation.publicReplyMessage ? [automation.publicReplyMessage] : []).length === 0);
+        : automation.publicReplyMessage ? [automation.publicReplyMessage] : [], aprovadas).length === 0);
     const handledSet = new Set(logs.filter((log) => {
       // OPI: segurado pelo portão do Jev = tratado (só sai por ação manual).
       if (log.status === "HELD_FOR_REVIEW") return true;
