@@ -889,7 +889,7 @@ export async function subscribeInstagramAccountToWebhooks(
   instagramAccountId: string,
   accessToken: string
 ): Promise<{ success: boolean }> {
-  // Facebook Login subscribes the Page (messaging fields); comment webhooks
+  // Facebook Login installs the app on the Page; comment and message webhooks
   // come from the app's Instagram webhook subscription in the Meta dashboard.
   const facebook = isFacebookLogin();
   const response = await fetch(
@@ -901,9 +901,10 @@ export async function subscribeInstagramAccountToWebhooks(
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({
-        subscribed_fields: facebook
-          ? ["messages", "messaging_postbacks"]
-          : ["comments", "messages"],
+        // Instagram events arrive through the app's Instagram webhook; the Page
+        // only needs the app installed. "feed" does that with
+        // pages_manage_metadata ("messages" here would demand pages_messaging).
+        subscribed_fields: facebook ? ["feed"] : ["comments", "messages"],
       }),
     }
   );

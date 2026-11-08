@@ -66,12 +66,12 @@ describe("Meta client with Facebook Login (META_LOGIN=facebook)", () => {
     expect(urlOf().searchParams.get("platform")).toBe("instagram");
   });
 
-  it("subscribes the Page to messaging webhooks", async () => {
+  it("installs the app on the Page (feed)", async () => {
     respond({ success: true });
     await subscribeInstagramAccountToWebhooks("IG1", "tok");
     expect(urlOf().pathname).toBe("/v25.0/PAGE1/subscribed_apps");
     const body = JSON.parse(String(fetchMock.mock.calls[0][1].body));
-    expect(body.subscribed_fields).toEqual(["messages", "messaging_postbacks"]);
+    expect(body.subscribed_fields).toEqual(["feed"]);
   });
 
   it("trades the system-user token for the Page token", async () => {
