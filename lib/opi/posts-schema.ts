@@ -88,7 +88,19 @@ export function deInputSP(valor: string): string {
   return new Date(`${valor}:00${FUSO_OFFSET}`).toISOString();
 }
 
-/** "HH:mm" em São Paulo. */
+const FMT_HORA_SP = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** "HH:mm" (24 h) no fuso America/Sao_Paulo, pelo Intl (não depende do fuso do navegador). */
 export function horaSP(data: Date | string): string {
-  return paraInputSP(data).slice(11, 16);
+  const d = new Date(data);
+  if (Number.isNaN(d.getTime())) return "--:--";
+  const partes = FMT_HORA_SP.formatToParts(d);
+  const h = partes.find((p) => p.type === "hour")?.value ?? "00";
+  const m = partes.find((p) => p.type === "minute")?.value ?? "00";
+  return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
 }

@@ -69,9 +69,13 @@ async function main() {
       iniciadoEm: status !== "NOVO" ? new Date() : null, concluidoEm: status === "FEITO" ? new Date() : null } });
 
   const aviso = "Conteúdo educativo. Não é recomendação individual de investimento.";
+  // Reels saem às 18h de São Paulo (D-0026): o exemplo segue a regra, não a hora em que o seed rodou
+  // (antes ficava "00:14" na grade, que era só a hora do seed, não erro de fuso).
+  const dia18hSP = (i: number) =>
+    new Date(`${new Date(Date.now() - 3 * 36e5 + i * 864e5).toISOString().slice(0, 10)}T18:00:00-03:00`);
   for (let i = 1; i <= 4; i++)
     await prisma.postAgendado.create({ data: { workspaceId: ws.id, tipo: i % 2 ? "REEL" : "CARROSSEL", midias: [],
-      legenda: `Post de exemplo ${i}.\n\n${aviso}`, agendadoPara: new Date(Date.now() + i * 864e5), status: "RASCUNHO" } });
+      legenda: `Post de exemplo ${i}.\n\n${aviso}`, agendadoPara: dia18hSP(i), status: "RASCUNHO" } });
 
   const mes = new Date(); mes.setDate(5);
   await prisma.lancamento.create({ data: { workspaceId: ws.id, data: mes, tipo: "DESPESA", categoria: "Ferramentas", descricao: "Assinatura de exemplo", valor: 97, status: "PAGO" } });

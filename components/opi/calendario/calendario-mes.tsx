@@ -1,49 +1,49 @@
 "use client";
 
 import { confirmar } from "@/lib/opi/confirmar";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Card, type BadgeTone } from "@/components/opi";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Card } from "@/components/opi";
 import { temAviso } from "@/lib/opi/aviso";
-import {
-  deslocarMes,
-  diaSP,
-  horaSP,
-  mesAtual,
-  type PostStatusOpi,
-  type PostTipoOpi,
-} from "@/lib/opi/posts-schema";
+import { deslocarMes, diaSP, horaSP, mesAtual, POST_STATUS } from "@/lib/opi/posts-schema";
+import { ChavePublicador } from "./chave-publicador";
+import { ChipPost, IconeTipo, STATUS_CLASSE, STATUS_ROTULO, TIPO_ROTULO } from "./chip-post";
 import { EditorPost } from "./editor-post";
 import type { PostCalendario } from "./tipos";
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const DIAS_SEMANA_CURTO = ["D", "S", "T", "Q", "Q", "S", "S"];
 const MESES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
-
-const STATUS_ROTULO: Record<PostStatusOpi, string> = {
-  RASCUNHO: "Rascunho",
-  APROVADO: "Aprovado",
-  PUBLICANDO: "Publicando",
-  PUBLICADO: "Publicado",
-  ERRO: "Erro",
-};
-const STATUS_TOM: Record<PostStatusOpi, BadgeTone> = {
-  RASCUNHO: "neutral",
-  APROVADO: "success",
-  PUBLICANDO: "neutral",
-  PUBLICADO: "success",
-  ERRO: "error",
-};
-const TIPO_CURTO: Record<PostTipoOpi, string> = { CARROSSEL: "Carrossel", REEL: "Reel", POST: "Imagem" };
+/** Até quantos chips cabem numa célula antes de virar "+N mais". */
+const CHIPS_POR_DIA = 3;
 
 type Pendencia = { id: string; motivo: string };
 type Edicao = { post: PostCalendario | null; dia?: string } | null;
+type Visao = "mes" | "lista";
+
+const fmtDiaLista = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "UTC",
+  weekday: "short",
+  day: "2-digit",
+  month: "short",
+});
+
+/** "sáb., 14 de nov." a partir de "AAAA-MM-DD" (a data já é o dia de São Paulo). */
+function rotuloDia(dia: string) {
+  const t = fmtDiaLista.format(new Date(`${dia}T12:00:00Z`));
+  return `${t.charAt(0).toUpperCase()}${t.slice(1)}`;
+}
 
 function nomeMes(mes: string) {
   const [a, m] = mes.split("-").map(Number);
-  return `${MESES[m - 1]} de ${a}`;
+  const nome = MESES[m - 1];
+  return `${nome.charAt(0).toUpperCase()}${nome.slice(1)} de ${a}`;
 }
+
+const botaoNav =
+  "rounded-full border border-border bg-white/40 px-2.5 py-1 text-sm text-foreground hover:bg-surface-hover";
 
 export function CalendarioMes() {
   const [mes, setMes] = useState(() => mesAtual());
@@ -54,6 +54,8 @@ export function CalendarioMes() {
   const [aprovando, setAprovando] = useState(false);
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   const [mensagem, setMensagem] = useState<string | null>(null);
+  const [visao, setVisao] = useState<Visao>("mes");
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -77,9 +79,15 @@ export function CalendarioMes() {
     setMensagem(null);
   }, [carregar]);
 
+  // Abriu um post (ou rascunho novo): leva o editor para a vista, principalmente no celular.
+  useEffect(() => {
+    if (edicao) editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [edicao]);
+
   const porDia = useMemo(() => {
     const mapa = new Map<string, PostCalendario[]>();
-    for (const p of posts) {
+    const ordenados = [...posts].sort((x, y) => x.agendadoPara.localeCompare(y.agendadoPara));
+    for (const p of ordenados) {
       const d = diaSP(p.agendadoPara);
       mapa.set(d, [...(mapa.get(d) ?? []), p]);
     }
@@ -100,11 +108,12 @@ export function CalendarioMes() {
   const semAviso = rascunhos.filter((p) => !temAviso(p.legenda)).length;
   const hoje = diaSP(new Date());
   const pendenciaPorId = new Map(pendencias.map((p) => [p.id, p.motivo]));
+  const diasComPost = [...porDia.keys()].sort();
 
   async function aprovarMes() {
     if (
       !await confirmar(
-        `Aprovar ${rascunhos.length} rascunho(s) de ${nomeMes(mes)}? Eles serão publicados sozinhos na data e hora marcadas.`,
+        `Aprovar ${rascunhos.length} rascunho(s) de ${nomeMes(mes)}? Eles serão publicados sozinhos na data e hora marcadas, se a publicação automática estiver ligada.`,
       )
     )
       return;
@@ -140,149 +149,251 @@ export function CalendarioMes() {
 
   return (
     <div className="space-y-4">
+      <ChavePublicador />
+
       <Card
-        title={<span className="capitalize">{nomeMes(mes)}</span>}
+        title={nomeMes(mes)}
         actions={
-          <>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="opi-seg" role="group" aria-label="Visão do calendário">
+              <button type="button" aria-pressed={visao === "mes"} onClick={() => setVisao("mes")}>
+                Mês
+              </button>
+              <button type="button" aria-pressed={visao === "lista"} onClick={() => setVisao("lista")}>
+                Lista
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => setMes((m) => deslocarMes(m, -1))}
-              className="rounded-md border border-border px-2.5 py-1 text-sm text-foreground hover:bg-surface-hover"
+              className={botaoNav}
               aria-label="Mês anterior"
             >
               ‹
             </button>
-            <button
-              type="button"
-              onClick={() => setMes(mesAtual())}
-              className="rounded-md border border-border px-2.5 py-1 text-sm text-foreground hover:bg-surface-hover"
-            >
+            <button type="button" onClick={() => setMes(mesAtual())} className={botaoNav}>
               Hoje
             </button>
             <button
               type="button"
               onClick={() => setMes((m) => deslocarMes(m, 1))}
-              className="rounded-md border border-border px-2.5 py-1 text-sm text-foreground hover:bg-surface-hover"
+              className={botaoNav}
               aria-label="Próximo mês"
             >
               ›
             </button>
-            <button
-              type="button"
-              onClick={() => setEdicao({ post: null })}
-              className="rounded-md border border-border px-3 py-1 text-sm text-foreground hover:bg-surface-hover"
-            >
+            <button type="button" onClick={() => setEdicao({ post: null })} className={botaoNav}>
               Novo rascunho
             </button>
             <button
               type="button"
               disabled={aprovando || rascunhos.length === 0}
               onClick={aprovarMes}
-              className="rounded-md bg-accent px-3 py-1 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
+              className="rounded-full bg-accent px-3 py-1 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-40"
             >
               {aprovando ? "Aprovando..." : "Aprovar calendário do mês"}
             </button>
-          </>
+          </div>
         }
       >
-        <div className="mb-3 flex flex-wrap gap-2 text-xs text-muted">
+        <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
           <span>{posts.length} post(s) no mês</span>
-          <span>·</span>
+          <span aria-hidden>·</span>
           <span>{rascunhos.length} rascunho(s)</span>
           {semAviso > 0 && (
             <>
-              <span>·</span>
+              <span aria-hidden>·</span>
               <span className="text-error">{semAviso} sem o aviso obrigatório</span>
+            </>
+          )}
+          {carregando && (
+            <>
+              <span aria-hidden>·</span>
+              <span>Carregando…</span>
             </>
           )}
         </div>
 
         {erro && <p className="mb-3 text-sm text-error">{erro}</p>}
-        {mensagem && <p className="mb-3 text-sm text-success">{mensagem}</p>}
+        {mensagem && <p className="mb-3 text-sm text-accent">{mensagem}</p>}
 
-        <div className="overflow-x-auto">
-          <div className="grid min-w-[640px] grid-cols-7 gap-px overflow-hidden rounded-md border border-border bg-border">
-            {DIAS_SEMANA.map((d) => (
-              <div key={d} className="bg-surface px-2 py-1.5 text-center text-xs font-medium text-muted">
-                {d}
+        {visao === "mes" ? (
+          <div className="grid grid-cols-7 gap-px overflow-hidden rounded-2xl border border-border bg-border">
+            {DIAS_SEMANA.map((d, i) => (
+              <div key={d} className="bg-[#eef1f4] px-1 py-1.5 text-center text-[11px] font-semibold text-muted">
+                <span className="sm:hidden">{DIAS_SEMANA_CURTO[i]}</span>
+                <span className="hidden sm:inline">{d}</span>
               </div>
             ))}
-            {celulas.map((dia, i) => (
-              <div
-                key={dia ?? `vazio-${i}`}
-                className={`min-h-24 bg-background p-1.5 ${dia ? "" : "opacity-40"}`}
-              >
-                {dia && (
-                  <>
-                    <div className="mb-1 flex items-center justify-between">
-                      <span
-                        className={`text-xs ${dia === hoje ? "rounded bg-foreground px-1 font-semibold text-background" : "text-muted"}`}
-                      >
-                        {Number(dia.slice(8))}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setEdicao({ post: null, dia })}
-                        className="rounded px-1 text-xs text-muted hover:bg-surface-hover hover:text-foreground"
-                        aria-label={`Novo rascunho em ${dia}`}
-                      >
-                        +
-                      </button>
-                    </div>
-                    <div className="space-y-1">
-                      {(porDia.get(dia) ?? []).map((p) => {
-                        const pend = pendenciaPorId.get(p.id);
-                        return (
-                          <button
+            {celulas.map((dia, i) => {
+              const doDia = dia ? (porDia.get(dia) ?? []) : [];
+              const extras = doDia.length - CHIPS_POR_DIA;
+              return (
+                <div
+                  key={dia ?? `vazio-${i}`}
+                  className={`group min-h-16 min-w-0 p-1 sm:min-h-24 sm:p-1.5 ${dia ? "bg-[#f4f6f8]" : "bg-[#e9edf1]"}`}
+                >
+                  {dia && (
+                    <>
+                      <div className="mb-1 flex items-center justify-between">
+                        <span
+                          className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] tabular-nums ${
+                            dia === hoje ? "bg-foreground font-semibold text-background" : "text-muted"
+                          }`}
+                        >
+                          {Number(dia.slice(8))}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setEdicao({ post: null, dia })}
+                          className="hidden h-5 w-5 items-center justify-center rounded-full text-xs text-muted opacity-0 transition hover:bg-surface-hover hover:text-foreground focus:opacity-100 group-hover:opacity-100 sm:inline-flex"
+                          aria-label={`Novo rascunho em ${rotuloDia(dia)}`}
+                        >
+                          +
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {doDia.slice(0, CHIPS_POR_DIA).map((p) => (
+                          <ChipPost
                             key={p.id}
+                            post={p}
+                            pendencia={pendenciaPorId.get(p.id)}
+                            onAbrir={() => setEdicao({ post: p })}
+                          />
+                        ))}
+                        {extras > 0 && (
+                          <button
                             type="button"
-                            onClick={() => setEdicao({ post: p })}
-                            className={`block w-full rounded border px-1.5 py-1 text-left text-xs hover:bg-surface-hover ${pend ? "border-error/60" : "border-border"} bg-surface`}
-                            title={pend ?? p.legenda.slice(0, 120)}
+                            onClick={() => setVisao("lista")}
+                            className="truncate text-left text-[10px] font-semibold text-muted hover:text-foreground"
                           >
-                            <span className="flex items-center justify-between gap-1">
-                              <span className="font-medium text-foreground">{horaSP(p.agendadoPara)}</span>
-                              <span className="text-muted">{TIPO_CURTO[p.tipo]}</span>
-                            </span>
-                            <span className="mt-0.5 flex flex-wrap items-center gap-1">
-                              <Badge tone={STATUS_TOM[p.status]} className="px-1.5 py-0 text-[10px]">
-                                {STATUS_ROTULO[p.status]}
-                              </Badge>
-                              {!temAviso(p.legenda) && (
-                                <Badge tone="error" className="px-1.5 py-0 text-[10px]">
-                                  Sem aviso
-                                </Badge>
-                              )}
-                            </span>
-                            {pend && <span className="mt-0.5 block text-[10px] text-error">{pend}</span>}
+                            +{extras} mais
                           </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        </div>
-        {carregando && <p className="mt-3 text-xs text-muted">Carregando...</p>}
+        ) : (
+          <ListaPosts
+            dias={diasComPost}
+            porDia={porDia}
+            pendenciaPorId={pendenciaPorId}
+            carregando={carregando}
+            onAbrir={(p) => setEdicao({ post: p })}
+          />
+        )}
+
+        <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted" aria-label="Legenda das cores">
+          {POST_STATUS.map((s) => (
+            <li key={s} className="inline-flex items-center gap-1.5">
+              <span aria-hidden className={`h-2 w-2 rounded-full ${STATUS_CLASSE[s].ponto}`} />
+              {STATUS_ROTULO[s]}
+            </li>
+          ))}
+          <li className="inline-flex items-center gap-1.5">
+            <span aria-hidden className="h-2 w-2 rounded-full ring-1 ring-error" />
+            Contorno vermelho: falta o aviso ou há pendência
+          </li>
+        </ul>
       </Card>
 
       {edicao && (
-        <Card title={edicao.post ? "Editar post" : "Novo rascunho"}>
-          <EditorPost
-            key={edicao.post?.id ?? `novo-${edicao.dia ?? ""}`}
-            post={edicao.post}
-            diaInicial={edicao.dia}
-            onFechar={() => setEdicao(null)}
-            onSalvo={() => {
-              setEdicao(null);
-              setPendencias([]);
-              void carregar();
-            }}
-          />
-        </Card>
+        <div ref={editorRef} className="scroll-mt-4">
+          <Card title={edicao.post ? "Editar post" : "Novo rascunho"}>
+            <EditorPost
+              key={edicao.post?.id ?? `novo-${edicao.dia ?? ""}`}
+              post={edicao.post}
+              diaInicial={edicao.dia}
+              onFechar={() => setEdicao(null)}
+              onSalvo={() => {
+                setEdicao(null);
+                setPendencias([]);
+                void carregar();
+              }}
+            />
+          </Card>
+        </div>
       )}
     </div>
+  );
+}
+
+function ListaPosts({
+  dias,
+  porDia,
+  pendenciaPorId,
+  carregando,
+  onAbrir,
+}: {
+  dias: string[];
+  porDia: Map<string, PostCalendario[]>;
+  pendenciaPorId: Map<string, string>;
+  carregando: boolean;
+  onAbrir: (p: PostCalendario) => void;
+}) {
+  if (dias.length === 0) {
+    return (
+      <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
+        {carregando ? "Carregando…" : "Nenhum post neste mês. Use “Novo rascunho” para começar."}
+      </p>
+    );
+  }
+  return (
+    <ol className="space-y-3">
+      {dias.map((dia) => (
+        <li key={dia}>
+          <p className="mb-1.5 text-xs font-semibold text-muted">{rotuloDia(dia)}</p>
+          <ul className="space-y-1.5">
+            {(porDia.get(dia) ?? []).map((p) => {
+              const pend = pendenciaPorId.get(p.id);
+              const semAvisoPost = !temAviso(p.legenda);
+              const cor = STATUS_CLASSE[p.status];
+              const primeiraLinha = p.legenda.split("\n")[0]?.trim();
+              return (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => onAbrir(p)}
+                    className={`flex w-full min-w-0 items-center gap-3 rounded-2xl border bg-white/45 px-3 py-2 text-left hover:bg-surface-hover ${
+                      semAvisoPost || pend ? "border-error/50" : "border-border"
+                    }`}
+                  >
+                    <span
+                      className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${cor.chip}`}
+                    >
+                      <IconeTipo tipo={p.tipo} className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="w-11 shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                      {horaSP(p.agendadoPara)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-foreground">
+                        {primeiraLinha || TIPO_ROTULO[p.tipo]}
+                      </span>
+                      <span className="block truncate text-[11px] text-muted">
+                        {TIPO_ROTULO[p.tipo]}
+                        {semAvisoPost && <span className="text-error"> · sem o aviso obrigatório</span>}
+                        {pend && <span className="text-error"> · {pend}</span>}
+                        {p.status === "ERRO" && p.erro && <span className="text-error"> · {p.erro}</span>}
+                      </span>
+                    </span>
+                    <span
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cor.chip}`}
+                    >
+                      <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${cor.ponto}`} />
+                      <span className="hidden sm:inline">{STATUS_ROTULO[p.status]}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </li>
+      ))}
+    </ol>
   );
 }
