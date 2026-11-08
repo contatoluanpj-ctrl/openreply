@@ -14,16 +14,12 @@ const VALUE_TONE: Record<BadgeTone, string> = {
   error: "text-error",
 };
 
-/** Número de destaque com rótulo e dica opcional. */
+/** Número de destaque no estilo dos blocos do Painel OPI. */
 export function StatTile({ label, value, hint, tone = "neutral" }: StatTileProps) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-        {label}
-      </p>
-      <p className={`mt-2 text-2xl font-semibold tabular-nums ${VALUE_TONE[tone]}`}>
-        {value}
-      </p>
+    <div className="opi-tile">
+      <p className="opi-label">{label}</p>
+      <p className={`opi-num mt-1.5 text-[28px] leading-tight ${VALUE_TONE[tone]}`}>{value}</p>
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
     </div>
   );

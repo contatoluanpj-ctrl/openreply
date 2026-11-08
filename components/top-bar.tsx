@@ -44,7 +44,7 @@ export default function TopBar({
 
   return (
     <header
-      className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 lg:px-8 border-b border-border bg-background"
+      className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 lg:px-10 bg-black/40 backdrop-blur-xl"
       // Installed to the home screen the app starts at the very top of the
       // display, so without this the title sits under the clock and battery.
       // The inset is 0 in a browser tab and on desktop.
@@ -61,11 +61,13 @@ export default function TopBar({
         >
           {t("Menu")}
         </button>
-        <h1 className="truncate text-base font-semibold sm:text-lg">{t(title)}</h1>
+        {!pathname?.startsWith("/dashboard/") && (
+          <h1 className="truncate font-display text-base font-bold sm:text-lg">{t(title)}</h1>
+        )}
       </div>
 
       {instagramAccountCount > 0 ? (
-        <p className="shrink-0 truncate text-sm text-muted">
+        <p className="ml-auto shrink-0 truncate rounded-full border border-white/15 bg-black/50 px-3.5 py-1.5 text-xs font-semibold text-white/70">
           {instagramAccountCount > 1
             ? t("{count} accounts", { count: instagramAccountCount })
             : `@${instagramUsername}`}

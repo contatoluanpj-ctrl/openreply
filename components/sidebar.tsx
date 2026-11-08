@@ -92,25 +92,27 @@ export default function Sidebar({
 
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-dvh w-64 max-w-[85vw] shrink-0 bg-surface border-r border-border flex flex-col
+          fixed top-0 left-0 z-50 h-dvh w-64 max-w-[85vw] shrink-0 flex flex-col
+          bg-[#070707] border-r border-border
           transition-transform duration-200 ease-out
-          lg:h-full lg:translate-x-0 lg:static lg:z-auto
+          lg:relative lg:m-4 lg:mr-0 lg:h-[calc(100%-2rem)] lg:w-[236px] lg:translate-x-0 lg:z-10
+          lg:rounded-[24px] lg:border lg:bg-white/[0.03] lg:backdrop-blur-xl
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
         {/* A gaveta ocupa a altura toda; sem o recuo a marca ficaria sob a barra de status. */}
         <div
-          className="px-6 py-5 border-b border-border"
+          className="px-5 pt-6 pb-4"
           style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top))" }}
         >
           <Link
             href="/dashboard/visao-geral"
             onClick={onClose}
-            className="flex items-center gap-3 text-foreground"
+            className="flex flex-col gap-2 text-foreground"
           >
             <span
               aria-hidden="true"
-              className="block h-6 w-[54px] shrink-0 bg-foreground"
+              className="block h-8 w-[88px] shrink-0 bg-foreground drop-shadow-[0_0_24px_rgba(255,255,255,0.25)]"
               style={{
                 WebkitMaskImage: "url(/opi-logo.svg)",
                 maskImage: "url(/opi-logo.svg)",
@@ -122,20 +124,20 @@ export default function Sidebar({
                 maskPosition: "left center",
               }}
             />
-            <span className="text-base font-semibold">OPI Central</span>
+            <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/45">OPI Central</span>
           </Link>
         </div>
 
         <nav
           aria-label="Navegação do painel"
-          className="flex-1 px-3 py-4 space-y-5 overflow-y-auto"
+          className="flex-1 px-3 py-2 space-y-5 overflow-y-auto"
         >
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
-              <p className="px-3 pb-1.5 text-xs font-medium uppercase tracking-wide text-muted">
+              <p className="px-3 pb-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/40">
                 {group.label}
               </p>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {group.items.map((item) => {
                   const isActive = isNavItemActive(item, pathname);
                   return (
@@ -145,11 +147,11 @@ export default function Sidebar({
                       onClick={onClose}
                       aria-current={isActive ? "page" : undefined}
                       className={`
-                        block px-3 py-2 rounded text-sm
+                        block rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors
                         ${
                           isActive
-                            ? "bg-surface-hover text-foreground font-medium"
-                            : "text-muted hover:text-foreground hover:bg-surface-hover"
+                            ? "bg-white/10 text-white shadow-[inset_2px_0_0_#fff]"
+                            : "text-white/60 hover:bg-white/5 hover:text-white"
                         }
                       `}
                     >
@@ -162,8 +164,8 @@ export default function Sidebar({
           ))}
         </nav>
 
-        <div className="px-5 py-4 border-t border-border">
-          <p className="text-sm text-foreground truncate">{workspaceName}</p>
+        <div className="mx-3 mb-3 border-t border-border px-2 pt-3 pb-1">
+          <p className="text-[13px] font-semibold text-foreground truncate">{workspaceName}</p>
           <p className="text-xs text-muted">OPI · Opções para Investidores</p>
           <a
             href={zernioLink({ placement: "sidebar" })}

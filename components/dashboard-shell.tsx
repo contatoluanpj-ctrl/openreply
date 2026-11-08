@@ -23,13 +23,18 @@ export default function DashboardShell({
     // h-dvh, not h-screen: on mobile browsers the URL bar eats into 100vh, which
     // would push the composer and pagination controls below the fold.
     <div className="opi-central flex h-dvh overflow-hidden bg-background text-foreground">
+      <div className="opi-aura" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </div>
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         workspaceName={workspaceName}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">
         <TopBar
           onMenuClick={() => setSidebarOpen(true)}
           instagramUsername={instagramUsername}
@@ -40,7 +45,7 @@ export default function DashboardShell({
             allow horizontal scrolling too, which lets a wide child drag the
             whole page sideways on a phone. */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="px-4 lg:px-8 py-5 sm:py-6 max-w-7xl mx-auto">
+          <div className="px-4 lg:px-10 py-6 sm:py-8 max-w-[1240px] mx-auto">
             {children}
           </div>
         </main>

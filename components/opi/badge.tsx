@@ -10,16 +10,24 @@ export interface BadgeProps {
 }
 
 const TONE_CLASS: Record<BadgeTone, string> = {
-  neutral: "border-border bg-surface-hover text-muted",
-  success: "border-success/30 bg-success/10 text-success",
-  error: "border-error/30 bg-error/10 text-error",
+  neutral: "border-white/10 bg-white/[0.04] text-muted",
+  success: "border-success/40 bg-success/10 text-success",
+  error: "border-error/40 bg-error/10 text-error",
 };
 
+const DOT: Record<BadgeTone, string> = {
+  neutral: "",
+  success: "bg-success",
+  error: "bg-error",
+};
+
+/** Pílula de estado; ativo/erro levam um ponto, como o "ao vivo" do artefato. */
 export function Badge({ tone = "neutral", className = "", children }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${TONE_CLASS[tone]} ${className}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${TONE_CLASS[tone]} ${className}`}
     >
+      {tone !== "neutral" && <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${DOT[tone]}`} />}
       {children}
     </span>
   );

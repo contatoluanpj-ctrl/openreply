@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap");
 @import "tailwindcss";
 
 /* ManyChat Alternative — Design System
@@ -108,28 +109,85 @@ select:focus-visible {
 }
 .zernio-sponsor { font-family: 'Zernio Geist', sans-serif; }
 
-/* OPI Central — painel interno em preto, branco e cinza.
-   Redefine os tokens só dentro do shell do painel; o site público não muda.
-   Únicas cores fora da escala de cinza: verde discreto (ativo/ok/enviado)
-   e vermelho discreto (erro/pausado/bloqueado). */
+/* OPI Central — mesmo visual do Painel OPI (artefato): fundo preto, vidro, brilho suave,
+   cantos grandes e pílulas. Só preto, branco e cinza; verde discreto = ativo/ok,
+   vermelho discreto = erro/pausado. Vale só dentro do shell; o site público não muda. */
 .opi-central {
   color-scheme: dark;
-  --color-background: #0a0a0a;
-  --color-surface: #141414;
-  --color-surface-hover: #1c1c1c;
-  --color-border: #2a2a2a;
-  --color-border-hover: #3a3a3a;
-  --color-foreground: #fafafa;
-  --color-muted: #a3a3a3;
-  --color-accent: #fafafa;
-  --color-accent-hover: #d4d4d4;
-  --color-accent-foreground: #0a0a0a;
-  --color-success: #4ade80;
-  --color-error: #f87171;
-  --color-warning: #a3a3a3;
+  --color-background: #000000;
+  --color-surface: rgba(255, 255, 255, 0.035);
+  --color-surface-hover: rgba(255, 255, 255, 0.07);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.16);
+  --color-foreground: #ffffff;
+  --color-muted: rgba(255, 255, 255, 0.56);
+  --color-accent: #ffffff;
+  --color-accent-hover: #e5e5e5;
+  --color-accent-foreground: #000000;
+  --color-success: #5ee08a;
+  --color-error: #ff6b6b;
+  --color-warning: rgba(255, 255, 255, 0.56);
+  --font-sans: Inter, "Segoe UI", system-ui, sans-serif;
+  --font-display: Manrope, Inter, "Segoe UI", sans-serif;
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --opi-inset: rgba(0, 0, 0, 0.42);
+  position: relative;
   background: var(--color-background);
   color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Brilho de fundo (as "auras" do artefato), em branco bem fraco. */
+.opi-aura { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+.opi-aura i { position: absolute; border-radius: 50%; background: #ffffff; }
+.opi-aura i:nth-child(1) { left: -220px; top: -180px; width: 560px; height: 560px; opacity: .07; filter: blur(150px); }
+.opi-aura i:nth-child(2) { right: -160px; top: 280px; width: 620px; height: 420px; opacity: .045; filter: blur(170px); }
+.opi-aura i:nth-child(3) { left: 25%; bottom: -280px; width: 900px; height: 520px; opacity: .06; filter: blur(190px); }
+
+.opi-central h1, .opi-central h2, .opi-central h3, .opi-central h4,
+.opi-central .font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
+.opi-central .tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* Vidro: toda superfície ganha desfoque, como os cartões do artefato. */
+.opi-central .bg-surface { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.opi-central .rounded { border-radius: var(--radius-sm); }
+
+/* Cartão de vidro com brilho no topo (opi-glass do artefato). */
+.opi-glass {
+  position: relative; overflow: hidden; border-radius: 24px;
+  background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .04);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+}
+.opi-glass::before { content: ""; position: absolute; top: -110px; right: -12%; width: 70%; height: 220px; border-radius: 50%; background: #fff; opacity: .06; filter: blur(64px); pointer-events: none; }
+.opi-glass::after { content: ""; position: absolute; top: 0; left: 24px; right: 24px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); pointer-events: none; }
+.opi-glass > * { position: relative; }
+.opi-tile {
+  border-radius: 16px; padding: 14px 18px; background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+.opi-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .45); font-weight: 600; }
+.opi-num { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.opi-inset { border-radius: 16px; background: var(--opi-inset); border: 1px solid rgba(255, 255, 255, 0.08); }
+
+/* Botões e campos em pílula, como os controles do artefato. */
+.opi-central button[class*="rounded"]:not([class*="rounded-full"]):not([class*="p-4"]):not([class*="p-5"]):not([class*="p-6"]),
+.opi-central a[class*="bg-accent"],
+.opi-central a[class*="border"][class*="py-1"],
+.opi-central a[class*="border"][class*="py-2"] { border-radius: 999px; }
+.opi-central select, .opi-central input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) { border-radius: 12px; }
+.opi-central textarea { border-radius: 14px; }
+.opi-central input, .opi-central select, .opi-central textarea { background-color: var(--opi-inset); }
+.opi-central .bg-accent { box-shadow: 0 0 18px rgba(255, 255, 255, .18); }
+
+/* Tabelas no estilo do artefato. */
+.opi-central th { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .45); font-weight: 600; }
 
 /* Fora de @layer de propósito: vence os utilitários. Botões "bg-accent text-white"
    ficariam brancos sobre branco; o texto vira o preto do token. */
@@ -149,7 +207,7 @@ select:focus-visible {
   background-color: #3a3a3a;
 }
 .opi-central .bg-accent > .bg-white {
-  background-color: #0a0a0a;
+  background-color: #000000;
 }
 .opi-central .bg-zinc-300 > .bg-white {
   background-color: #a3a3a3;
@@ -175,3 +233,8 @@ select:focus-visible {
 .opi-central .border-zernio-border {
   border-color: var(--color-border);
 }
+
+/* Barras de rolagem discretas dentro do painel. */
+.opi-central nav { scrollbar-width: none; }
+.opi-central nav::-webkit-scrollbar { display: none; }
+.opi-central main { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .15) transparent; }
