@@ -113,7 +113,7 @@ export function GraficoReceitaDespesa({ serie }: { serie: PontoMes[] }) {
   return (
     <div className="h-[260px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={serie} barGap={4} barCategoryGap="22%" margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+        <BarChart data={serie} barGap={4} barCategoryGap="22%" margin={{ top: 16, right: 4, left: 4, bottom: 0 }}>
           <CartesianGrid vertical={false} stroke={COR.grade} />
           <XAxis dataKey="mes" tickFormatter={(m) => rotuloMes(m)} axisLine={false} tickLine={false} tick={EIXO} />
           <YAxis tickFormatter={brlCurto} axisLine={false} tickLine={false} tick={EIXO} width={64} />
@@ -135,7 +135,7 @@ export function GraficoSaldo({ serie }: { serie: PontoMes[] }) {
   return (
     <div className="h-[260px] w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={serie} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+        <AreaChart data={serie} margin={{ top: 16, right: 4, left: 4, bottom: 0 }}>
           <defs>
             <linearGradient id="opi-fin-saldo" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={COR.principal} stopOpacity={0.35} />

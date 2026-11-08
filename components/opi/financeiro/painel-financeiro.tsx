@@ -155,6 +155,8 @@ export function PainelFinanceiro() {
       setErro(json?.error ?? "Não foi possível apagar.");
       return;
     }
+    // Some da lista na hora; os gráficos se atualizam em seguida.
+    setLista((atual) => atual?.filter((x) => x.id !== l.id) ?? atual);
     if (editando?.id === l.id) setEditando(null);
     void carregar();
   }
