@@ -1,4 +1,4 @@
-// OPI: agenda 23 PUT (09/11 18h) e 09 BINÁRIA (10/11 18h), horário de São Paulo, com o "sim" do Luan ao
+// OPI: agenda 23 PUT (09/11 18h), 09 BINÁRIA (10/11 18h) e 08 INGRESSO (11/11 18h, "Sim, agenda o 08"), horário de São Paulo, com o "sim" do Luan ao
 // calendário CALENDARIO-CENAS-NOV.md ("Sim, aprovo", 08/11) e a confirmação nesta sessão ("Sim, agenda").
 // As legendas são lidas do próprio arquivo do calendário (blocos ``` de cada data), sem redigitar.
 // Uso: npx tsx --env-file=C:/opi-work/openreply/.env scripts/opi-agenda-nov.ts
@@ -12,6 +12,7 @@ const BASE = "https://opi-openreply.vercel.app/m/";
 const ITENS = [
   { titulo: "## 09/11 — 23 PUT", video: "9ba33d8b1152fc33edbfe687.mp4", quando: "2026-11-09T21:00:00.000Z" },
   { titulo: "## 10/11 — 09 BINÁRIA", video: "6e4ddbc2c293c1fcf8884270.mp4", quando: "2026-11-10T21:00:00.000Z" },
+  { titulo: "## 11/11 — 08 INGRESSO", video: "5fb8489ac90e72e8f527ca2f.mp4", quando: "2026-11-11T21:00:00.000Z" },
 ];
 
 function legenda(md: string, titulo: string): string {
