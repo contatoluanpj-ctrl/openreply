@@ -13,7 +13,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AccountSelect, { type AccountOption } from "@/components/account-select";
 import { readCache, writeCache } from "@/lib/client-cache";
-import { PainelCampanhas, PillEstado } from "@/components/opi/campanhas/painel-campanhas";
+import dynamic from "next/dynamic";
+import { PillEstado } from "@/components/opi/campanhas/pill-estado";
+
+// O painel de estatísticas usa recharts: baixa depois que a lista de campanhas já apareceu.
+const PainelCampanhas = dynamic(
+  () => import("@/components/opi/campanhas/painel-campanhas").then((m) => m.PainelCampanhas),
+  {
+    ssr: false,
+    loading: () => <div aria-hidden className="opi-glass muted h-[420px] animate-pulse" />,
+  }
+);
 import { PageHeader } from "@/components/opi";
 
 interface Campaign {

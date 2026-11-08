@@ -5,16 +5,8 @@ import { confirmar } from "@/lib/opi/confirmar";
 import { formatarBRL, mesAtual, paraCentavos, type LancamentoJson } from "@/lib/opi/financeiro";
 import { variacao, type PainelFin } from "@/lib/opi/financeiro-dados";
 import { FormLancamento } from "./form-lancamento";
-import {
-  CabecalhoGrafico,
-  COR,
-  DonutCategorias,
-  GraficoReceitaDespesa,
-  GraficoSaldo,
-  Legenda,
-  PrevistoPagoMes,
-  rotuloMes,
-} from "./graficos";
+import { CabecalhoGrafico, COR, Legenda, rotuloMes } from "./graficos-base";
+import { DonutCategorias, GraficoReceitaDespesa, GraficoSaldo, PrevistoPagoMes } from "./graficos-lazy";
 
 type TipoFiltro = "" | "RECEITA" | "DESPESA";
 

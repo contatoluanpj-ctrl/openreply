@@ -12,11 +12,10 @@ import {
   GraficoHorario,
   GraficoPalavras,
   GraficoSeguidores,
-} from "@/components/opi/dashboard/graficos";
+} from "@/components/opi/dashboard/graficos-lazy";
 import { getCurrentWorkspaceId } from "@/lib/auth";
-import { prisma } from "@/lib/db/client";
-import { carregarDashboard } from "@/lib/opi/dashboard-dados";
-import { LINKS, carregarVisaoGeral, montarPendencias, type Bloco } from "@/lib/opi/visao-geral";
+import { carregarPainelDashboard } from "@/lib/opi/dashboard-cache";
+import { LINKS, montarPendencias, type Bloco } from "@/lib/opi/visao-geral";
 
 export const dynamic = "force-dynamic";
 
@@ -56,8 +55,8 @@ export default async function DashboardPage() {
   const workspaceId = await getCurrentWorkspaceId();
   if (!workspaceId) redirect("/login");
 
-  const agora = new Date();
-  const [d, v] = await Promise.all([carregarDashboard(prisma, workspaceId, agora), carregarVisaoGeral(prisma, workspaceId, agora)]);
+  // Cache curto (30 s) por workspace: voltar ao Dashboard não refaz as consultas pesadas.
+  const { d, v, agora } = await carregarPainelDashboard(workspaceId);
   const pendencias = montarPendencias(v);
   const erros = pendencias.filter((p) => p.nivel === "erro").length;
   const { seguidores, dms7d, taxa, posts, gasto } = d.kpis;

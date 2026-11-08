@@ -1,3 +1,4 @@
+import { cache } from "react";
 import NextAuth, { type NextAuthConfig } from "next-auth";
 import Nodemailer from "next-auth/providers/nodemailer";
 import Resend from "next-auth/providers/resend";
@@ -63,10 +64,14 @@ export const authConfig = {
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
 
-export async function getCurrentUserId(): Promise<string | null> {
-  const session = await auth();
+// cache(): layout e página do mesmo pedido leem a sessão uma vez só (uma ida ao banco a menos por tela).
+// Fora de um render de servidor o cache do React não guarda nada e a função roda normalmente.
+export const sessaoAtual = cache(() => auth());
+
+export const getCurrentUserId = cache(async (): Promise<string | null> => {
+  const session = await sessaoAtual();
   return session?.user?.id ?? null;
-}
+});
 
 export async function getCurrentWorkspaceId(): Promise<string | null> {
   const userId = await getCurrentUserId();

@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -17,25 +16,13 @@ import {
   YAxis,
 } from "recharts";
 import { formatarBRL } from "@/lib/opi/financeiro";
-import type { FatiaCategoria, PontoMes, PrevistoPago } from "@/lib/opi/financeiro-dados";
+import { COR, rotuloMes, Vazio } from "./graficos-base";
 
-export const COR = {
-  principal: "#D9541E",
-  secundaria: "#111217",
-  terciaria: "rgba(17,18,23,.35)",
-  grade: "rgba(17,18,23,.08)",
-  eixo: "rgba(17,18,23,.5)",
-};
+export { CabecalhoGrafico, COR, Legenda, rotuloMes, Vazio } from "./graficos-base";
+import type { FatiaCategoria, PontoMes, PrevistoPago } from "@/lib/opi/financeiro-dados";
 
 /** Rampa do donut: laranja e grafite alternados, do mais forte ao mais leve. */
 const RAMPA = ["#D9541E", "#111217", "#E8936B", "rgba(17,18,23,.45)", "#F3C2A9", "rgba(17,18,23,.2)"];
-
-const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
-
-export function rotuloMes(mes: string, comAno = false) {
-  const [ano, m] = mes.split("-");
-  return comAno ? `${MESES[Number(m) - 1]}/${ano.slice(2)}` : MESES[Number(m) - 1];
-}
 
 /** "R$ 1,2 mil" no eixo, para não poluir. */
 function brlCurto(centavos: number) {
@@ -46,33 +33,6 @@ function brlCurto(centavos: number) {
 }
 
 const EIXO = { fontSize: 11, fill: COR.eixo };
-
-/** Cabeçalho de gráfico do artefato: título, frase "o que olhar" e controle opcional à direita. */
-export function CabecalhoGrafico({ titulo, olhar, controle }: { titulo: string; olhar: string; controle?: ReactNode }) {
-  return (
-    <div className="mb-[18px] flex flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h3 className="font-display text-base font-bold text-foreground">{titulo}</h3>
-        <p className="mt-[3px] text-xs text-muted">{olhar}</p>
-      </div>
-      {controle}
-    </div>
-  );
-}
-
-/** Estado vazio centrado, como o .opi-empty do artefato. */
-export function Vazio({ titulo, texto, altura = 240 }: { titulo: string; texto: string; altura?: number }) {
-  return (
-    <div className="flex flex-col items-center justify-center px-6 text-center" style={{ minHeight: altura }}>
-      <svg viewBox="0 0 24 24" className="h-7 w-7 text-accent" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-        <path d="M3 3v18h18" strokeLinecap="round" />
-        <path d="M7 15l4-4 3 3 5-6" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="3 3" />
-      </svg>
-      <b className="mt-2.5 text-sm text-foreground/80">{titulo}</b>
-      <small className="mt-1 max-w-[22rem] text-xs leading-relaxed text-muted">{texto}</small>
-    </div>
-  );
-}
 
 type ItemTip = { name?: string | number; value?: number | string; color?: string; dataKey?: string | number };
 
@@ -87,19 +47,6 @@ function Dica({ active, payload, label, rotulos }: { active?: boolean; payload?:
           <span className="text-white/70">{rotulos[String(p.dataKey)] ?? p.name}</span>
           <b className="ml-auto pl-3 text-[13px] tabular-nums">{formatarBRL(Number(p.value ?? 0))}</b>
         </div>
-      ))}
-    </div>
-  );
-}
-
-export function Legenda({ itens }: { itens: { cor: string; nome: string }[] }) {
-  return (
-    <div className="flex flex-wrap gap-3 text-xs text-muted">
-      {itens.map((i) => (
-        <span key={i.nome} className="flex items-center gap-1.5">
-          <i className="inline-block h-[3px] w-4 rounded" style={{ background: i.cor }} />
-          {i.nome}
-        </span>
       ))}
     </div>
   );

@@ -13,7 +13,13 @@ import { useI18n } from "@/lib/i18n/provider";
 import { useEffect, useState } from "react";
 import AccountSelect from "@/components/account-select";
 import StatCard from "@/components/stat-card";
-import FollowerChart from "@/components/follower-chart";
+import dynamic from "next/dynamic";
+
+// recharts só baixa quando o gráfico aparece.
+const FollowerChart = dynamic(() => import("@/components/follower-chart"), {
+  ssr: false,
+  loading: () => <div aria-hidden className="h-[260px] animate-pulse rounded-2xl bg-[#111217]/[0.05]" />,
+});
 import type { OverviewResponse } from "@/app/api/instagram/overview/route";
 
 function formatNumber(n: number | null, locale: Locale): string {

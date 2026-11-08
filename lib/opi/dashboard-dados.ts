@@ -417,6 +417,33 @@ export async function carregarDashboard(db: DbDashboard, workspaceId: string, ag
   // Para o delta da taxa (30d contra os 30d anteriores) precisa de 60 dias de log; 90 cobre.
   const dias = porPeriodo((n) => ultimosDias(agora, n));
 
+  const mesAnt = mesAnterior(j);
+  // Posts e gasto não dependem das séries: saem junto com elas (uma ida ao banco a menos).
+  const etapaPostsGasto = Promise.all([
+    bloco(async () => {
+      const [mes, ant, agendados] = await Promise.all([
+        db.postAgendado.count({ where: { workspaceId, status: "PUBLICADO", agendadoPara: { gte: j.inicioMes, lt: j.fimMes } } }),
+        db.postAgendado.count({ where: { workspaceId, status: "PUBLICADO", agendadoPara: { gte: mesAnt.inicio, lt: mesAnt.fim } } }),
+        db.postAgendado.count({
+          where: { workspaceId, status: { in: ["APROVADO", "PUBLICANDO"] }, agendadoPara: { gte: agora, lt: j.fimMes } },
+        }),
+      ]);
+      return { valor: mes, anterior: ant, delta: variacaoPct(mes, ant), agendados };
+    }),
+    bloco(async () => {
+      const linhas = await db.lancamento.findMany({
+        where: { workspaceId, tipo: "DESPESA", data: { gte: mesAnt.inicio, lt: j.fimMes } },
+        select: { data: true, status: true, valor: true },
+      });
+      const soma = (f: (l: (typeof linhas)[number]) => boolean) =>
+        Math.round(linhas.filter(f).reduce((t, l) => t + paraNumero(l.valor), 0) * 100) / 100;
+      const pago = soma((l) => l.status === "PAGO" && l.data >= j.inicioMes);
+      const ant = soma((l) => l.status === "PAGO" && l.data < j.inicioMes);
+      const previsto = soma((l) => l.status === "PREVISTO" && l.data >= j.inicioMes);
+      return { valor: pago, anterior: ant, delta: variacaoPct(pago, ant), previsto };
+    }),
+  ]);
+
   const [pontosIg, snaps, logs] = await Promise.all([
     bloco(async () =>
       db.followerSnapshot.findMany({
@@ -451,31 +478,7 @@ export async function carregarDashboard(db: DbDashboard, workspaceId: string, ag
     }),
   ]);
 
-  const mesAnt = mesAnterior(j);
-  const [posts, gasto] = await Promise.all([
-    bloco(async () => {
-      const [mes, ant, agendados] = await Promise.all([
-        db.postAgendado.count({ where: { workspaceId, status: "PUBLICADO", agendadoPara: { gte: j.inicioMes, lt: j.fimMes } } }),
-        db.postAgendado.count({ where: { workspaceId, status: "PUBLICADO", agendadoPara: { gte: mesAnt.inicio, lt: mesAnt.fim } } }),
-        db.postAgendado.count({
-          where: { workspaceId, status: { in: ["APROVADO", "PUBLICANDO"] }, agendadoPara: { gte: agora, lt: j.fimMes } },
-        }),
-      ]);
-      return { valor: mes, anterior: ant, delta: variacaoPct(mes, ant), agendados };
-    }),
-    bloco(async () => {
-      const linhas = await db.lancamento.findMany({
-        where: { workspaceId, tipo: "DESPESA", data: { gte: mesAnt.inicio, lt: j.fimMes } },
-        select: { data: true, status: true, valor: true },
-      });
-      const soma = (f: (l: (typeof linhas)[number]) => boolean) =>
-        Math.round(linhas.filter(f).reduce((t, l) => t + paraNumero(l.valor), 0) * 100) / 100;
-      const pago = soma((l) => l.status === "PAGO" && l.data >= j.inicioMes);
-      const ant = soma((l) => l.status === "PAGO" && l.data < j.inicioMes);
-      const previsto = soma((l) => l.status === "PREVISTO" && l.data >= j.inicioMes);
-      return { valor: pago, anterior: ant, delta: variacaoPct(pago, ant), previsto };
-    }),
-  ]);
+  const [posts, gasto] = await etapaPostsGasto;
 
   // Séries do Instagram (sem FollowerSnapshot a série é vazia, não inventada).
   const serieIgCompleta = pontosIg.ok ? serieSeguidores(pontosIg.dados, ultimosDias(agora, 97)) : null;
