@@ -3,6 +3,7 @@ import { recordWorkerHeartbeat } from "@/lib/ops/worker-health";
 import { reconcileComments } from "@/lib/polling/comment-reconciler";
 import { reenviarAvisosPendentes } from "@/lib/opi/jev-worker";
 import { attachPendingNextReels } from "@/lib/automation/attach-next-reel";
+import { publicadorLigado, rodarPublicador } from "@/lib/opi/publicador";
 import os from "node:os";
 
 const worker = createDMWorker();
@@ -56,10 +57,20 @@ async function poll() {
 setTimeout(() => void poll(), 10_000);
 const pollTimer = setInterval(() => void poll(), POLL_INTERVAL_MS);
 
+// OPI Central: publicador do calendário aprovado (D-0026). Desligado até OPI_PUBLICADOR=on.
+const publicadorTimer = publicadorLigado()
+  ? setInterval(() => {
+      void rodarPublicador(new Date()).catch((error) => {
+        console.error("[DM Worker] OPI: publicador falhou:", error instanceof Error ? error.name : "erro");
+      });
+    }, 60_000)
+  : null;
+
 async function shutdown(signal: string) {
   console.log(`[DM Worker] ${signal} received, closing worker`);
   clearInterval(heartbeatTimer);
   clearInterval(pollTimer);
+  if (publicadorTimer) clearInterval(publicadorTimer);
   await worker.close();
   process.exit(0);
 }

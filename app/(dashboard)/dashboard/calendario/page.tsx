@@ -1,4 +1,5 @@
-import { Badge, Card, PageHeader } from "@/components/opi";
+import { PageHeader } from "@/components/opi";
+import { CalendarioMes } from "@/components/opi/calendario/calendario-mes";
 
 export const dynamic = "force-dynamic";
 
@@ -7,14 +8,9 @@ export default function CalendarioPage() {
     <div>
       <PageHeader
         title="Calendário"
-        description="Posts agendados. Só publica item de calendário aprovado pelo Luan (D-0026), com o aviso obrigatório na legenda."
-        actions={<Badge>Em construção</Badge>}
+        description="Rascunhos de carrossel, imagem e Reel. Nada é publicado sem o calendário do mês aprovado pelo Luan (D-0026), e toda legenda precisa do aviso obrigatório."
       />
-      <Card title="Em breve">
-        <p className="text-sm text-muted">
-          Esta página faz parte do OPI Central e ainda está sendo montada.
-        </p>
-      </Card>
+      <CalendarioMes />
     </div>
   );
 }
