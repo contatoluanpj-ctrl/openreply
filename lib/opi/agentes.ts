@@ -51,6 +51,9 @@ export const OPERACIONAIS: readonly MembroEquipe[] = [
   { id: "lead_response_sdr", nome: "Lead Response (SDR)", papel: "Resposta a leads", status: "ON-DEMAND", reportaA: "cro" },
   { id: "automation_engineer", nome: "Automation Engineer", papel: "Automações de custo zero", status: "ON-DEMAND", reportaA: "cto" },
   { id: "software_engineer", nome: "Software Engineer", papel: "Site e ferramentas", status: "ON-DEMAND", reportaA: "cto" },
+  { id: "web-designer", nome: "Web Designer", papel: "Site avançado, motion e design system", status: "ON-DEMAND", reportaA: "cto" },
+  { id: "gestor-de-trafego", nome: "Gestor de Tráfego", papel: "Meta Ads e Google Ads", status: "ON-DEMAND", reportaA: "cmo" },
+  { id: "filmmaker", nome: "Filmmaker", papel: "Gravação no OBS (tela e câmera)", status: "ON-DEMAND", reportaA: "cmo" },
 ];
 
 export const STATUS_LABEL: Record<StatusRegistro, string> = {

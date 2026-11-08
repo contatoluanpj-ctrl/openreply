@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { AGENTES_IDS, nomeDoAgente } from "@/lib/opi/agentes";
 import { TYPESAFE_URL } from "@/lib/opi/jev-gate";
 
-export const PERGUNTA_RESPONSAVEL = { id: "opi.roteador.responsavel", version: 1 } as const;
+export const PERGUNTA_RESPONSAVEL = { id: "opi.roteador.responsavel", version: 2 } as const;
 export const PERGUNTA_VARIAS_AREAS = { id: "opi.roteador.varias_areas", version: 1 } as const;
 export const LEDGER_AUTOMACAO = "roteador";
 
@@ -49,7 +49,10 @@ export const ROTAS: Record<string, string> = {
   data_analyst: "Números: scorecard semanal, dashboard, análise de métricas e relatórios com dados.",
   lead_response_sdr: "Responder leads: quem pediu material ou entrou na lista e precisa de retorno individual.",
   automation_engineer: "Automações: criar ou mudar fluxo automático (n8n, DM automática, comentário→DM, alertas), integrações de custo zero.",
-  software_engineer: "Programar: nova tela ou função no site ou no painel, corrigir código, ferramenta interna.",
+  software_engineer: "Programar: corrigir bug, nova função ou integração no site ou no painel, banco de dados, ferramenta interna.",
+  "web-designer": "Visual do site: redesenhar páginas, deixar o site mais bonito e avançado, animações de scroll (scroll trigger, GSAP), design system, layout, tipografia e cores.",
+  "gestor-de-trafego": "Anúncios pagos: Meta Ads, Google Ads, YouTube/TikTok Ads, otimizar campanha, orçamento, criativo de anúncio, pixel e conversões.",
+  filmmaker: "Gravação: preparar e operar o OBS, cenas de tela e câmera, áudio e enquadramento antes de gravar um vídeo.",
 };
 
 export type SugestaoRota = {
