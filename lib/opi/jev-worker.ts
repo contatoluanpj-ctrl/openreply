@@ -212,7 +212,20 @@ async function segurar(e: PortaoEntrada, decisao: string, motivo: string, scores
 export async function aplicarPortaoJev(e: PortaoEntrada): Promise<boolean> {
   if (!gateLigado()) return true;
 
-  const naoConforme = motivoCampanhaNaoConforme(e.automation);
+  // Textos aprovados no painel. Sem a tabela (ou com erro de banco) vale só a lista fixa: o portão nunca afrouxa.
+  let extras: { palavra: string; dmMessage: string }[] = [];
+  try {
+    extras = (await prisma.textoAprovado?.findMany({
+      where: { workspaceId: e.automation.workspaceId, ativo: true },
+      select: { palavra: true, dmMessage: true },
+    })) ?? [];
+  } catch {
+    extras = [];
+  }
+  const naoConforme = motivoCampanhaNaoConforme(
+    e.automation,
+    new Map(extras.map((t) => [hashTemplate(t.dmMessage), t.palavra] as const)),
+  );
   if (naoConforme) {
     await segurar(e, "bloqueado_template", `campanha fora do aprovado: ${naoConforme}`, null);
     return false;

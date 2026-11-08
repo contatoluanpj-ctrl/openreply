@@ -523,8 +523,13 @@ export type CampanhaConfig = {
  * padrão em inglês), sem follow-up e sem gatilho por DM. Campo ausente conta como não conforme.
  * Devolve null quando está conforme, ou o motivo do bloqueio.
  */
-export function motivoCampanhaNaoConforme(a: CampanhaConfig): string | null {
-  const palavra = PALAVRA_DO_TEXTO.get(hashTemplate(a.dmMessage));
+export function motivoCampanhaNaoConforme(
+  a: CampanhaConfig,
+  // Textos aprovados pelo Luan no painel (tabela TextoAprovado): hash do texto → palavra. Valem as mesmas regras.
+  aprovadosExtra: ReadonlyMap<string, string> = new Map(),
+): string | null {
+  const hash = hashTemplate(a.dmMessage);
+  const palavra = PALAVRA_DO_TEXTO.get(hash) ?? aprovadosExtra.get(hash);
   if (!palavra) return "texto da DM diferente do aprovado (DM-TEXTOS v1.1)";
   const kws = (a.keywords ?? []).map(normalizar).filter(Boolean);
   if (kws.length !== 1 || kws[0] !== normalizar(palavra)) return `palavra-chave diferente do material do texto (o texto é de ${palavra})`;

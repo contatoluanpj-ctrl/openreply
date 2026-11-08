@@ -347,6 +347,16 @@ describe("achados do fiscal: texto aprovado, janela, máscara", () => {
     for (const t of TEXTOS_DM_APROVADOS) expect(t.endsWith("Conteúdo educativo. Não é recomendação individual de investimento.")).toBe(true);
   });
 
+  it("aceita texto aprovado no painel (TextoAprovado) só com a própria palavra e presa a um post", () => {
+    const extras = new Map([[hashTemplate("Oi!"), "TESTE"]]);
+    const teste = { dmMessage: "Oi!", keywords: ["TESTE"], postId: "m9" };
+    expect(motivoCampanhaNaoConforme(teste)).toMatch(/texto/);
+    expect(motivoCampanhaNaoConforme(teste, extras)).toBeNull();
+    expect(motivoCampanhaNaoConforme({ ...teste, keywords: ["JUROS"] }, extras)).toMatch(/palavra-chave/);
+    expect(motivoCampanhaNaoConforme({ ...teste, postId: null }, extras)).toMatch(/Reel/);
+    expect(motivoCampanhaNaoConforme({ ...teste, dmMessage: "Oi!!" }, extras)).toMatch(/texto/);
+  });
+
   it("campanha conforme só com texto aprovado, da própria palavra, presa a um Reel e sem extras", () => {
     const ok = { dmMessage: TEXTOS_DM_APROVADOS[1], keywords: ["ERROS"], postId: "m1" };
     expect(motivoCampanhaNaoConforme(ok)).toBeNull();

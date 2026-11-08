@@ -473,3 +473,20 @@ model PostbackDelivery {
   id String @id
   createdAt DateTime @default(now())
 }
+
+/// OPI Central: texto de DM aprovado pelo Luan (palavra → DM + resposta pública). O portão do Jev aceita os textos
+/// fixos do código (DM-TEXTOS v1.1) e também estes. Gerido no painel, em Marketing → Palavras-chave.
+model TextoAprovado {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  palavra         String
+  dmMessage       String
+  respostaPublica String   @default("Te mandei na DM! 📩")
+  aprovadoPor     String
+  ativo           Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([workspaceId, palavra])
+  @@index([workspaceId, ativo])
+}
