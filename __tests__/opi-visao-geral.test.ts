@@ -279,7 +279,7 @@ describe("montarPendencias", () => {
     const p = montarPendencias(v);
     expect(p.map((x) => [x.nivel, x.href])).toEqual([
       ["erro", LINKS.campanhas], // freio
-      ["erro", LINKS.registroDms], // DMs em revisão
+      ["erro", LINKS.palavras], // DMs em revisão (Palavras-chave > Comentários sem DM)
       ["erro", LINKS.calendario], // post com erro
       ["erro", LINKS.calendario], // legenda sem aviso
       ["erro", LINKS.agentes],

@@ -14,6 +14,8 @@ export const LINKS = {
   redes: "/dashboard/redes",
   financeiro: "/dashboard/financeiro",
   registroDms: "/logs",
+  // DMs seguradas (HELD_FOR_REVIEW) aparecem em Palavras-chave > Comentários sem DM, com Reprocessar.
+  palavras: "/dashboard/palavras",
 } as const;
 
 export type DbVisao = Pick<
@@ -348,7 +350,7 @@ export function montarPendencias(v: Pick<VisaoGeral, "redes" | "posts" | "dms" |
   }
   if (v.dms.ok && v.dms.dados.emRevisao > 0) {
     const n = v.dms.dados.emRevisao;
-    p.push({ texto: `${plural(n, "DM segurada", "DMs seguradas")} para revisão`, href: LINKS.registroDms, nivel: "erro" });
+    p.push({ texto: `${plural(n, "DM segurada", "DMs seguradas")} para revisão`, href: LINKS.palavras, nivel: "erro" });
   }
   if (v.campanhas.ok && v.campanhas.dados.totalPausadas > 0) {
     const n = v.campanhas.dados.totalPausadas;
