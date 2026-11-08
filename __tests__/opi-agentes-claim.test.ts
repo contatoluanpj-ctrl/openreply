@@ -17,7 +17,7 @@ import { POST as claim } from "../app/api/agentes/claim/route";
 import { POST as responder } from "../app/api/agentes/[id]/resposta/route";
 import { GET as listar, POST as enviar } from "../app/api/agentes/route";
 import { claimProximoPedido } from "../lib/opi/pedidos";
-import { estaAtivo, AGENTES_CHAT } from "../lib/opi/agentes";
+import { estaAtivo, AGENTES_IDS } from "../lib/opi/agentes";
 
 const token = `orp_${"b".repeat(43)}`;
 const key = { id: "key", workspaceId: "ws", scopes: ["agentes:rw"], expiresAt: new Date("2099-01-01"), revokedAt: null };
@@ -117,20 +117,23 @@ describe("rotas de sessão", () => {
     expect((await listar(new Request("https://example.test/api/agentes"))).status).toBe(401);
   });
 
-  it("GET resumo devolve os 3 agentes do chat", async () => {
+  it("GET resumo devolve todos os agentes do mapa", async () => {
     state.pedidos.findMany.mockResolvedValueOnce([{ agente: "social-distribuicao", status: "EM_ANDAMENTO", updatedAt: new Date(0) }]);
     const json = await (await listar(new Request("https://example.test/api/agentes"))).json();
-    expect(json.data.map((d: { agente: string }) => d.agente)).toEqual([...AGENTES_CHAT]);
+    expect(json.data.map((d: { agente: string }) => d.agente)).toEqual([...AGENTES_IDS]);
     expect(json.data.find((d: { agente: string }) => d.agente === "social-distribuicao").ativo).toBe(true);
   });
 
-  it("POST cria pedido NOVO para agente válido e recusa agente fora da lista", async () => {
+  it("POST aceita qualquer agente do mapa e recusa o fundador e ids fora da lista", async () => {
     state.pedidos.create.mockImplementation(async ({ data }) => ({ id: "n1", ...data, status: "NOVO" }));
     const headers = { "content-type": "application/json", origin: "https://example.test" };
     const ok = await enviar(req("/api/agentes", { agente: "roteirista-copywriter", mensagem: "7 roteiros" }, headers));
     expect(ok.status).toBe(201);
     expect(state.pedidos.create.mock.calls[0][0].data).toEqual({ workspaceId: "ws", agente: "roteirista-copywriter", mensagem: "7 roteiros" });
-    expect((await enviar(req("/api/agentes", { agente: "ceo", mensagem: "x" }, headers))).status).toBe(400);
+    expect((await enviar(req("/api/agentes", { agente: "ceo", mensagem: "pauta da semana" }, headers))).status).toBe(201);
+    expect((await enviar(req("/api/agentes", { agente: "data_analyst", mensagem: "scorecard" }, headers))).status).toBe(201);
+    expect((await enviar(req("/api/agentes", { agente: "luan", mensagem: "x" }, headers))).status).toBe(400);
+    expect((await enviar(req("/api/agentes", { agente: "inexistente", mensagem: "x" }, headers))).status).toBe(400);
   });
 
   it("POST de MEMBER → 403", async () => {

@@ -8,7 +8,7 @@ export default function AgentesPage() {
     <div>
       <PageHeader
         title="Equipe"
-        description="Quem faz o quê na OPI e o chat com os agentes executores. Os pedidos são respondidos pelo runner local."
+        description="Você no topo, os C-levels no mesmo nível e a equipe de cada um embaixo. Clique em qualquer agente para mandar um pedido."
       />
       <Equipe />
     </div>

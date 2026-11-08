@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Card } from "@/components/opi";
-import { AGENTES_CHAT, nomeDoAgente, type AgenteChat } from "@/lib/opi/agentes";
-import { ChatAgente } from "./chat-agente";
-import { MapaEquipe, type ResumoAgente } from "./mapa-equipe";
+import type { ResumoAgente } from "@/lib/opi/agentes-dados";
+import { Organograma } from "./organograma";
+import { PainelAgente } from "./painel-agente";
 
-const POLL_MS = 5000;
-
+/** Organograma clicável; o painel do agente abre à direita. Polling só com o painel aberto. */
 export function Equipe() {
-  const [selecionado, setSelecionado] = useState<AgenteChat>(AGENTES_CHAT[0]);
+  const [selecionado, setSelecionado] = useState<string | null>(null);
   const [resumo, setResumo] = useState<ResumoAgente[]>([]);
 
   const carregarResumo = useCallback(async () => {
@@ -24,46 +23,21 @@ export function Equipe() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- busca inicial; o setState acontece depois do fetch
     void carregarResumo();
-    const timer = setInterval(() => void carregarResumo(), POLL_MS);
-    return () => clearInterval(timer);
   }, [carregarResumo]);
 
-  const selecionar = (id: string) => {
-    if ((AGENTES_CHAT as readonly string[]).includes(id)) setSelecionado(id as AgenteChat);
-  };
+  const atualizar = useCallback(() => void carregarResumo(), [carregarResumo]);
+  const fechar = useCallback(() => setSelecionado(null), []);
 
   return (
-    <div className="space-y-6">
-      <Card title="Mapa da equipe">
-        <MapaEquipe resumo={resumo} selecionado={selecionado} onSelecionar={selecionar} />
+    <>
+      <Card title="Organograma">
+        <Organograma resumo={resumo} selecionado={selecionado} onSelecionar={setSelecionado} />
       </Card>
-
-      <Card title={`Chat: ${nomeDoAgente(selecionado)}`}>
-        <div role="tablist" aria-label="Agentes com chat" className="mb-4 flex flex-wrap gap-2">
-          {AGENTES_CHAT.map((id) => {
-            const ativo = resumo.find((r) => r.agente === id)?.ativo ?? false;
-            return (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={id === selecionado}
-                onClick={() => setSelecionado(id)}
-                className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors ${
-                  id === selecionado
-                    ? "border-foreground bg-surface-hover text-foreground"
-                    : "border-border text-muted hover:border-border-hover hover:text-foreground"
-                }`}
-              >
-                <span className={`h-2 w-2 rounded-full ${ativo ? "bg-success" : "bg-muted/50"}`} />
-                {nomeDoAgente(id)}
-              </button>
-            );
-          })}
-        </div>
-        <ChatAgente key={selecionado} agente={selecionado} onAtividade={carregarResumo} />
-      </Card>
-    </div>
+      {selecionado && (
+        <PainelAgente key={selecionado} agente={selecionado} onFechar={fechar} onAtividade={atualizar} />
+      )}
+    </>
   );
 }

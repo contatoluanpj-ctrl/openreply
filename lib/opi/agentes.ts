@@ -33,7 +33,7 @@ export const C_LEVELS: readonly MembroEquipe[] = [
   { id: "chro", nome: "CHRO", papel: "Pessoas", status: "NOT_JUSTIFIED_YET" },
 ];
 
-/** Nomes = nomes dos arquivos em OPI/.claude/agents/ (o runner passa isso ao "claude -p"). */
+/** Têm arquivo próprio em OPI/.claude/agents/ (o runner passa o nome ao "claude -p"). Os demais ids também recebem pedidos. */
 export const AGENTES_CHAT = ["editor-de-videos", "social-distribuicao", "roteirista-copywriter"] as const;
 export type AgenteChat = (typeof AGENTES_CHAT)[number];
 
@@ -80,6 +80,18 @@ export function isAgenteChat(value: unknown): value is AgenteChat {
   return typeof value === "string" && (AGENTES_CHAT as readonly string[]).includes(value);
 }
 
+/** Todo membro do mapa que pode receber pedido (C-levels e operacionais; o fundador não). */
+export const AGENTES_IDS: readonly string[] = [...C_LEVELS, ...OPERACIONAIS].map((m) => m.id);
+
+export function isAgenteId(value: unknown): value is string {
+  return typeof value === "string" && AGENTES_IDS.includes(value);
+}
+
+export function membroPorId(id: string): MembroEquipe | undefined {
+  if (id === FUNDADOR.id) return FUNDADOR;
+  return C_LEVELS.find((m) => m.id === id) ?? OPERACIONAIS.find((m) => m.id === id);
+}
+
 export function nomeDoAgente(id: string): string {
-  return OPERACIONAIS.find((m) => m.id === id)?.nome ?? id;
+  return membroPorId(id)?.nome ?? id;
 }
