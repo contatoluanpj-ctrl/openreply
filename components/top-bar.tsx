@@ -6,22 +6,20 @@
  * Page title, mobile hamburger, and connection status.
  */
 
-import type { StaticMessageKey } from "@/lib/i18n";
 import { useI18n } from "@/lib/i18n/provider";
 import { usePathname } from "next/navigation";
 
-const pageTitles: Record<string, StaticMessageKey> = {
-  "/dashboard": "Dashboard",
-  "/overview": "Overview",
-  "/inbox": "Inbox",
-  "/campaigns/import": "Import campaigns",
-  "/campaigns": "Campaigns",
-  "/campaigns/new": "New Campaign",
-  "/automations": "Campaigns",
-  "/automations/new": "New Campaign",
-  "/logs": "DM Logs",
-  "/settings": "Settings",
-  "/diagnostics": "Diagnostics",
+const pageTitles: Record<string, string> = {
+  "/overview": "Seguidores",
+  "/inbox": "Caixa de entrada",
+  "/campaigns/import": "Importar campanhas",
+  "/campaigns/new": "Nova campanha",
+  "/automations": "Automações",
+  "/automations/new": "Nova campanha",
+  "/logs": "Registro de DMs",
+  "/settings": "Configurações",
+  "/diagnostics": "Diagnóstico",
+  "/integrations": "API e MCP",
 };
 
 interface TopBarProps {
@@ -37,9 +35,9 @@ export default function TopBar({
 }: TopBarProps) {
   const { t } = useI18n();
   const pathname = usePathname();
-  const title: StaticMessageKey = pageTitles[pathname] ?? (
-    pathname.endsWith("/edit") ? "Edit campaign"
-      : pathname.startsWith("/campaigns/") ? "Campaign details" : "Dashboard"
+  const title: string | null = pageTitles[pathname] ?? (
+    pathname.endsWith("/edit") ? "Editar campanha"
+      : pathname.startsWith("/campaigns/") ? "Detalhes da campanha" : null
   );
 
   return (
@@ -61,8 +59,8 @@ export default function TopBar({
         >
           {t("Menu")}
         </button>
-        {!pathname?.startsWith("/dashboard/") && (
-          <h1 className="truncate font-display text-base font-bold sm:text-lg">{t(title)}</h1>
+        {title && (
+          <h1 className="truncate font-display text-base font-bold sm:text-lg">{title}</h1>
         )}
       </div>
 
