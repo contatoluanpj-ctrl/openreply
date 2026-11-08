@@ -94,12 +94,14 @@ export async function GET() {
     })),
   ]);
 
-  // OPI: com o portão do Jev ligado, sem a chave do Jev nada sai e sem o Telegram os avisos ao Luan se perdem.
+  // OPI: com o portão do Jev ligado, sem a chave do Jev nada sai. O Telegram é opcional (Luan, 07/11): sem ele
+  // os avisos não chegam no celular, mas continuam em Logs no painel; aparece como aviso, não como erro.
   // Só os NOMES das variáveis ausentes aparecem, nunca os valores.
-  const faltando = gateLigado()
-    ? ["TYPESAFE_API_KEY", "OPI_TELEGRAM_BOT_TOKEN", "OPI_TELEGRAM_CHAT_ID"].filter((k) => !process.env[k]?.trim())
+  const faltando = gateLigado() ? ["TYPESAFE_API_KEY"].filter((k) => !process.env[k]?.trim()) : [];
+  const avisos = gateLigado()
+    ? ["OPI_TELEGRAM_BOT_TOKEN", "OPI_TELEGRAM_CHAT_ID"].filter((k) => !process.env[k]?.trim())
     : [];
-  const opi = { status: (faltando.length ? "error" : "ok") as CheckStatus, gate: gateLigado() ? "on" : "off", faltando };
+  const opi = { status: (faltando.length ? "error" : "ok") as CheckStatus, gate: gateLigado() ? "on" : "off", faltando, avisos };
 
   const healthy =
     opi.status === "ok" &&
