@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AccountSelect, { type AccountOption } from "@/components/account-select";
 import { readCache, writeCache } from "@/lib/client-cache";
+import { PainelCampanhas, PillEstado } from "@/components/opi/campanhas/painel-campanhas";
 
 interface Campaign {
   id: string;
@@ -84,6 +85,8 @@ export default function CampaignsPage() {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  // Sobe a cada ativar/pausar/apagar/duplicar para os gráficos do topo recarregarem.
+  const [versaoStats, setVersaoStats] = useState(0);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">(
     "all"
   );
@@ -210,6 +213,7 @@ export default function CampaignsPage() {
       setAutomations((prev) =>
         prev.map((a) => (a.id === id ? { ...a, isActive: !isActive } : a))
       );
+      setVersaoStats((v) => v + 1);
     } catch (err) {
       console.error("Failed to toggle:", err);
     }
@@ -235,6 +239,7 @@ export default function CampaignsPage() {
     try {
       await fetch(`/api/automations?id=${id}`, { method: "DELETE" });
       setAutomations((prev) => prev.filter((a) => a.id !== id));
+      setVersaoStats((v) => v + 1);
     } catch (err) {
       console.error("Failed to delete:", err);
     }
@@ -250,7 +255,10 @@ export default function CampaignsPage() {
         method: "POST",
       });
       const data = await res.json();
-      if (data.success) void fetchAutomations();
+      if (data.success) {
+        void fetchAutomations();
+        setVersaoStats((v) => v + 1);
+      }
       else console.error("Duplicate failed:", data.error);
     } catch (err) {
       console.error("Failed to duplicate:", err);
@@ -261,7 +269,7 @@ export default function CampaignsPage() {
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="panel rounded p-6 h-36" />
+          <div key={i} className="opi-glass muted h-36 animate-pulse" />
         ))}
       </div>
     );
@@ -281,6 +289,14 @@ export default function CampaignsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Gráficos de decisão (OPI): KPIs, DMs por dia, resposta pública vs DM, desempenho e comparativo. */}
+      <PainelCampanhas accountId={selectedAccountId} versao={versaoStats} />
+
+      <div className="pt-4">
+        <h2 className="font-display text-[22px] font-extrabold tracking-tight">Campanhas</h2>
+        <p className="mt-1 text-[13px] text-muted">Clique numa campanha para editar. O botão liga e pausa; o menu ⋯ duplica ou apaga.</p>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -322,17 +338,14 @@ export default function CampaignsPage() {
             placeholder={t("Search campaigns by name, keyword, or message…")}
             className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-zinc-500 focus:border-accent/40 focus:outline-none"
           />
-          <div className="inline-flex shrink-0 rounded-lg bg-surface p-1">
+          <div className="opi-seg shrink-0" role="group" aria-label="Filtrar por estado">
             {(["all", "active", "paused"] as const).map((s) => (
               <button
                 key={label(s)}
                 type="button"
+                aria-pressed={statusFilter === s}
                 onClick={() => setStatusFilter(s)}
-                className={`rounded-md px-3 py-1.5 text-sm capitalize transition-colors ${
-                  statusFilter === s
-                    ? "bg-background font-medium text-foreground ring-1 ring-accent/40"
-                    : "text-muted hover:text-foreground"
-                }`}
+                className="capitalize"
               >
                 {label(s)}
               </button>
@@ -343,7 +356,7 @@ export default function CampaignsPage() {
 
       {/* Empty state */}
       {automations.length === 0 && (
-        <div className="panel rounded p-8 text-center sm:p-12">
+        <div className="opi-glass p-8 text-center sm:p-12">
           <h3 className="text-lg font-semibold mb-2">{t("No campaigns yet")}</h3>
           <p className="text-sm text-muted mb-6 max-w-sm mx-auto">
             {t("Create your first comment-to-DM campaign to turn a post or reel into a measurable conversation flow.")}
@@ -359,7 +372,7 @@ export default function CampaignsPage() {
 
       {/* No matches for the current filter */}
       {automations.length > 0 && filtered.length === 0 && (
-        <div className="panel rounded p-8 text-center text-sm text-muted">
+        <div className="opi-glass muted p-8 text-center text-sm text-muted">
           {t("No campaigns match your search.")}
         </div>
       )}
@@ -372,7 +385,7 @@ export default function CampaignsPage() {
           <div
             key={auto.id}
             onClick={() => router.push(`/campaigns/${auto.id}`)}
-            className="panel rounded p-4 hover:border-border-hover transition-all cursor-pointer"
+            className="opi-glass cursor-pointer p-4 transition-transform hover:-translate-y-0.5 sm:p-5"
           >
             {/* Wraps rather than compressing: on a phone the action buttons drop
                 to their own line instead of squeezing the campaign summary. */}
@@ -424,15 +437,7 @@ export default function CampaignsPage() {
                   <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-xs text-muted">
                     @{auto.instagramAccount.username}
                   </span>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      auto.isActive
-                        ? "bg-success/10 text-success"
-                        : "bg-zinc-500/10 text-muted"
-                    }`}
-                  >
-                    {auto.isActive ? t("Active") : t("Paused")}
-                  </span>
+                  <PillEstado ativa={auto.isActive} />
                   {auto.pendingNextReel && (
                     <span className="shrink-0 rounded-full bg-surface-hover px-2 py-0.5 text-xs font-medium text-warning">
                       {t("Waiting for next reel")}
@@ -455,7 +460,7 @@ export default function CampaignsPage() {
                   {auto.keywords.map((kw) => (
                     <span
                       key={kw}
-                      className="px-2 py-0.5 rounded-md bg-accent/10 text-accent text-xs font-medium border border-accent/10"
+                      className="rounded-full bg-[#D9541E]/10 px-2.5 py-0.5 text-xs font-semibold text-[#D9541E]"
                     >
                       {kw}
                     </span>
@@ -496,7 +501,7 @@ export default function CampaignsPage() {
                     {auto.analytics.topKeywords.map((keyword) => (
                       <span
                         key={keyword.keyword}
-                        className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-muted"
+                        className="opi-inset px-2 py-1 text-xs text-muted"
                       >
                         {keyword.keyword}: {keyword.count}
                       </span>
