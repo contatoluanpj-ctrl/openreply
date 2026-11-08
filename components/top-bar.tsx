@@ -44,7 +44,7 @@ export default function TopBar({
 
   return (
     <header
-      className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 lg:px-10 bg-black/40 backdrop-blur-xl"
+      className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 lg:px-10 bg-[#DFE5EB]/60 backdrop-blur-xl"
       // Installed to the home screen the app starts at the very top of the
       // display, so without this the title sits under the clock and battery.
       // The inset is 0 in a browser tab and on desktop.
@@ -67,7 +67,7 @@ export default function TopBar({
       </div>
 
       {instagramAccountCount > 0 ? (
-        <p className="ml-auto shrink-0 truncate rounded-full border border-white/15 bg-black/50 px-3.5 py-1.5 text-xs font-semibold text-white/70">
+        <p className="ml-auto shrink-0 truncate rounded-full border border-[#111217]/10 bg-white/60 px-3.5 py-1.5 text-xs font-semibold text-[#111217]/70">
           {instagramAccountCount > 1
             ? t("{count} accounts", { count: instagramAccountCount })
             : `@${instagramUsername}`}

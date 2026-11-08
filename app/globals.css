@@ -109,24 +109,27 @@ select:focus-visible {
 }
 .zernio-sponsor { font-family: 'Zernio Geist', sans-serif; }
 
-/* OPI Central — mesmo visual do Painel OPI (artefato): fundo preto, vidro, brilho suave,
-   cantos grandes e pílulas. Só preto, branco e cinza; verde discreto = ativo/ok,
-   vermelho discreto = erro/pausado. Vale só dentro do shell; o site público não muda. */
+/* OPI Central — mesmo visual do Painel OPI (artefato): vidro, auras, cantos grandes, pílulas,
+   Manrope/Inter. Paleta do Luan (08/11): base clara #DFE5EB, escuro #111217, detalhe #D9541E.
+   Vale só dentro do shell; o site público não muda. */
 .opi-central {
-  color-scheme: dark;
-  --color-background: #000000;
-  --color-surface: rgba(255, 255, 255, 0.035);
-  --color-surface-hover: rgba(255, 255, 255, 0.07);
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-hover: rgba(255, 255, 255, 0.16);
-  --color-foreground: #ffffff;
-  --color-muted: rgba(255, 255, 255, 0.56);
-  --color-accent: #ffffff;
-  --color-accent-hover: #e5e5e5;
-  --color-accent-foreground: #000000;
-  --color-success: #5ee08a;
-  --color-error: #ff6b6b;
-  --color-warning: rgba(255, 255, 255, 0.56);
+  color-scheme: light;
+  --opi-base: #DFE5EB;
+  --opi-ink: #111217;
+  --opi-acc: #D9541E;
+  --color-background: #DFE5EB;
+  --color-surface: rgba(255, 255, 255, 0.55);
+  --color-surface-hover: rgba(255, 255, 255, 0.85);
+  --color-border: rgba(17, 18, 23, 0.09);
+  --color-border-hover: rgba(17, 18, 23, 0.18);
+  --color-foreground: #111217;
+  --color-muted: rgba(17, 18, 23, 0.58);
+  --color-accent: #D9541E;
+  --color-accent-hover: #c2491a;
+  --color-accent-foreground: #ffffff;
+  --color-success: #D9541E;
+  --color-error: #c0262d;
+  --color-warning: rgba(17, 18, 23, 0.58);
   --font-sans: Inter, "Segoe UI", system-ui, sans-serif;
   --font-display: Manrope, Inter, "Segoe UI", sans-serif;
   --radius-xs: 8px;
@@ -135,7 +138,7 @@ select:focus-visible {
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-2xl: 24px;
-  --opi-inset: rgba(0, 0, 0, 0.42);
+  --opi-inset: rgba(17, 18, 23, 0.045);
   position: relative;
   background: var(--color-background);
   color: var(--color-foreground);
@@ -143,38 +146,47 @@ select:focus-visible {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Brilho de fundo (as "auras" do artefato), em branco bem fraco. */
+/* Auras do artefato, na cor de detalhe. */
 .opi-aura { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
-.opi-aura i { position: absolute; border-radius: 50%; background: #ffffff; }
-.opi-aura i:nth-child(1) { left: -220px; top: -180px; width: 560px; height: 560px; opacity: .07; filter: blur(150px); }
-.opi-aura i:nth-child(2) { right: -160px; top: 280px; width: 620px; height: 420px; opacity: .045; filter: blur(170px); }
-.opi-aura i:nth-child(3) { left: 25%; bottom: -280px; width: 900px; height: 520px; opacity: .06; filter: blur(190px); }
+.opi-aura i { position: absolute; border-radius: 50%; background: #D9541E; }
+.opi-aura i:nth-child(1) { left: -220px; top: -180px; width: 560px; height: 560px; opacity: .16; filter: blur(150px); }
+.opi-aura i:nth-child(2) { right: -160px; top: 280px; width: 620px; height: 420px; opacity: .10; filter: blur(170px); }
+.opi-aura i:nth-child(3) { left: 25%; bottom: -280px; width: 900px; height: 520px; opacity: .14; filter: blur(190px); }
 
 .opi-central h1, .opi-central h2, .opi-central h3, .opi-central h4,
 .opi-central .font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
-.opi-central .tabular-nums { font-variant-numeric: tabular-nums; }
 
-/* Vidro: toda superfície ganha desfoque, como os cartões do artefato. */
 .opi-central .bg-surface { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
 .opi-central .rounded { border-radius: var(--radius-sm); }
 
-/* Cartão de vidro com brilho no topo (opi-glass do artefato). */
+/* Cartão de vidro (opi-glass do artefato): brilho laranja no canto e linha no topo. */
 .opi-glass {
   position: relative; overflow: hidden; border-radius: 24px;
-  background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, .9), inset 0 1px 0 rgba(255, 255, 255, .04);
+  background: rgba(255, 255, 255, 0.55); border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 24px 60px -30px rgba(17, 18, 23, .28), inset 0 1px 0 rgba(255, 255, 255, .9);
   backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
 }
-.opi-glass::before { content: ""; position: absolute; top: -110px; right: -12%; width: 70%; height: 220px; border-radius: 50%; background: #fff; opacity: .06; filter: blur(64px); pointer-events: none; }
-.opi-glass::after { content: ""; position: absolute; top: 0; left: 24px; right: 24px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); pointer-events: none; }
+.opi-glass::before { content: ""; position: absolute; top: -110px; right: -12%; width: 70%; height: 220px; border-radius: 50%; background: #D9541E; opacity: .14; filter: blur(64px); pointer-events: none; }
+.opi-glass::after { content: ""; position: absolute; top: 0; left: 24px; right: 24px; height: 1px; background: linear-gradient(90deg, transparent, rgba(217, 84, 30, .85), transparent); pointer-events: none; }
 .opi-glass > * { position: relative; }
+.opi-glass.muted { background: rgba(255, 255, 255, 0.32); box-shadow: none; }
+.opi-glass.muted::before, .opi-glass.muted::after { display: none; }
 .opi-tile {
-  border-radius: 16px; padding: 14px 18px; background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px; padding: 14px 18px; background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 12px 32px -24px rgba(17, 18, 23, .3);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
 }
-.opi-label { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255, 255, 255, .45); font-weight: 600; }
-.opi-num { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.opi-inset { border-radius: 16px; background: var(--opi-inset); border: 1px solid rgba(255, 255, 255, 0.08); }
+.opi-label { display: flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: rgba(17, 18, 23, .5); font-weight: 600; }
+.opi-label svg { width: 13px; height: 13px; color: #D9541E; flex: none; }
+.opi-num { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #111217; }
+.opi-inset { border-radius: 16px; background: var(--opi-inset); border: 1px solid rgba(17, 18, 23, 0.06); }
+.opi-delta { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.opi-delta.up { background: rgba(217, 84, 30, .14); color: #D9541E; }
+.opi-delta.down { background: rgba(17, 18, 23, .06); color: rgba(17, 18, 23, .6); }
+.opi-seg { display: inline-flex; padding: 4px; border-radius: 999px; background: rgba(17, 18, 23, .05); border: 1px solid rgba(17, 18, 23, .08); }
+.opi-seg button { border: 0; background: transparent; color: rgba(17, 18, 23, .6); font: 600 12px var(--font-sans); padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+.opi-seg button[aria-pressed="true"] { background: #D9541E; color: #fff; box-shadow: 0 0 18px rgba(217, 84, 30, .45); }
+.opi-tip { border-radius: 12px; padding: 8px 12px; font-size: 12px; background: rgba(17, 18, 23, .92); color: #fff; border: 0; box-shadow: 0 12px 30px -12px rgba(17, 18, 23, .5); }
 
 /* Botões e campos em pílula, como os controles do artefato. */
 .opi-central button[class*="rounded"]:not([class*="rounded-full"]):not([class*="p-4"]):not([class*="p-5"]):not([class*="p-6"]),
@@ -183,58 +195,28 @@ select:focus-visible {
 .opi-central a[class*="border"][class*="py-2"] { border-radius: 999px; }
 .opi-central select, .opi-central input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) { border-radius: 12px; }
 .opi-central textarea { border-radius: 14px; }
-.opi-central input, .opi-central select, .opi-central textarea { background-color: var(--opi-inset); }
-.opi-central .bg-accent { box-shadow: 0 0 18px rgba(255, 255, 255, .18); }
+.opi-central input, .opi-central select, .opi-central textarea { background-color: rgba(255, 255, 255, .7); }
+.opi-central .bg-accent { box-shadow: 0 0 18px rgba(217, 84, 30, .35); }
+.opi-central th { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: rgba(17, 18, 23, .5); font-weight: 600; }
 
-/* Tabelas no estilo do artefato. */
-.opi-central th { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255, 255, 255, .45); font-weight: 600; }
+/* Confirmação dentro da página (lib/opi/confirmar.ts). */
+.opi-confirm { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: rgba(17, 18, 23, .35); backdrop-filter: blur(4px); padding: 16px; }
+.opi-confirm-box { width: min(100%, 26rem); border-radius: 24px; padding: 22px; background: #f4f6f8; color: #111217; box-shadow: 0 30px 80px -20px rgba(17, 18, 23, .45); font: 14px/1.5 var(--font-sans); }
+.opi-confirm-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.opi-confirm-acoes button { border-radius: 999px; padding: 9px 16px; font: 600 13px var(--font-sans); cursor: pointer; border: 1px solid rgba(17, 18, 23, .12); background: #fff; color: #111217; }
+.opi-confirm-acoes .opi-confirm-ok { background: #D9541E; border-color: #D9541E; color: #fff; }
 
-/* Fora de @layer de propósito: vence os utilitários. Botões "bg-accent text-white"
-   ficariam brancos sobre branco; o texto vira o preto do token. */
-.opi-central .bg-accent {
-  color: var(--color-accent-foreground);
-}
-.opi-central .hover\:bg-accent-hover:hover {
-  color: var(--color-accent-foreground);
-}
+/* Interruptores claros. */
+.opi-central .bg-accent > .bg-white { background-color: #ffffff; }
+.opi-central .text-zinc-600, .opi-central .text-zinc-700 { color: var(--color-muted); }
+.opi-central .text-zinc-900 { color: var(--color-foreground); }
 
-/* Interruptores e ilhas claras herdadas do OpenReply, neutralizados no escuro. */
-.opi-central .bg-white {
-  background-color: var(--color-surface);
-}
-.opi-central .bg-zinc-200,
-.opi-central .bg-zinc-300 {
-  background-color: #3a3a3a;
-}
-.opi-central .bg-accent > .bg-white {
-  background-color: #000000;
-}
-.opi-central .bg-zinc-300 > .bg-white {
-  background-color: #a3a3a3;
-}
-.opi-central .text-zinc-600,
-.opi-central .text-zinc-700 {
-  color: var(--color-muted);
-}
-.opi-central .text-zinc-900 {
-  color: var(--color-foreground);
-}
+/* Bloco do Zernio nas Configurações: neutro dentro do painel. */
+.opi-central .zernio-sponsor { background: var(--color-surface); color: var(--color-foreground); border-color: var(--color-border); }
+.opi-central .zernio-action { background: var(--color-accent); color: var(--color-accent-foreground); }
+.opi-central .border-zernio-border { border-color: var(--color-border); }
 
-/* Bloco do Zernio nas Configurações: sem coral nem creme dentro do painel. */
-.opi-central .zernio-sponsor {
-  background: var(--color-surface);
-  color: var(--color-foreground);
-  border-color: var(--color-border);
-}
-.opi-central .zernio-action {
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-}
-.opi-central .border-zernio-border {
-  border-color: var(--color-border);
-}
-
-/* Barras de rolagem discretas dentro do painel. */
+/* Barras de rolagem discretas. */
 .opi-central nav { scrollbar-width: none; }
 .opi-central nav::-webkit-scrollbar { display: none; }
-.opi-central main { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .15) transparent; }
+.opi-central main { scrollbar-width: thin; scrollbar-color: rgba(17, 18, 23, .18) transparent; }

@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmar } from "@/lib/opi/confirmar";
 import LanguageSwitcher from "@/components/language-switcher";
 import { useI18n } from "@/lib/i18n/provider";
 import { Suspense, useEffect, useState } from "react";
@@ -80,7 +81,7 @@ export default function SettingsPage() {
   }
 
   async function disconnectInstagram(instagramAccountId: string) {
-    if (!confirm(t("Disconnect Instagram? Campaigns for this account will stop sending DMs."))) {
+    if (!await confirmar(t("Disconnect Instagram? Campaigns for this account will stop sending DMs."))) {
       return;
     }
 

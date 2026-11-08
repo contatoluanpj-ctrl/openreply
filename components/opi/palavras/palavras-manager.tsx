@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmar } from "@/lib/opi/confirmar";
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Card } from "@/components/opi";
 import type { BadgeTone } from "@/components/opi";
@@ -211,7 +212,7 @@ export function PalavrasManager() {
   }
 
   async function apagar(t: Texto) {
-    if (!window.confirm(`Apagar o texto da palavra ${t.palavra}? As campanhas com esse texto ficam bloqueadas pelo portão.`)) return;
+    if (!await confirmar(`Apagar o texto da palavra ${t.palavra}? As campanhas com esse texto ficam bloqueadas pelo portão.`)) return;
     setOcupado(t.id);
     const res = await chamar(`/api/opi/textos/${t.id}`, { method: "DELETE" });
     setOcupado(null);

@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmar } from "@/lib/opi/confirmar";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n/provider";
 
@@ -24,7 +25,7 @@ export default function IntegrationsPage() {
   useEffect(() => { void Promise.resolve().then(load).catch(e => setNotice(e.message)); }, []);
 
   async function create() {
-    if (!window.confirm(t("Create a read-only workspace key for {days} days? Anyone with this key can read your campaigns.", { days }))) return;
+    if (!await confirmar(t("Create a read-only workspace key for {days} days? Anyone with this key can read your campaigns.", { days }))) return;
     setBusy(true); setToken(""); setNotice("");
     try {
       const response = await fetch("/api/integrations/keys", {
@@ -40,7 +41,7 @@ export default function IntegrationsPage() {
   }
 
   async function revoke(key: Key) {
-    if (!window.confirm(t("Revoke this key? Connected clients will lose access immediately."))) return;
+    if (!await confirmar(t("Revoke this key? Connected clients will lose access immediately."))) return;
     setBusy(true); setNotice("");
     try {
       const response = await fetch(`/api/integrations/keys?id=${encodeURIComponent(key.id)}`, { method: "DELETE" });

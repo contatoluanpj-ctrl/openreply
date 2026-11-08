@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmar } from "@/lib/opi/confirmar";
 /**
  * Campaigns List Page
  *
@@ -230,7 +231,7 @@ export default function CampaignsPage() {
   }
 
   async function deleteAutomation(id: string) {
-    if (!confirm(t("Delete this campaign? This cannot be undone."))) return;
+    if (!await confirmar(t("Delete this campaign? This cannot be undone."))) return;
     try {
       await fetch(`/api/automations?id=${id}`, { method: "DELETE" });
       setAutomations((prev) => prev.filter((a) => a.id !== id));

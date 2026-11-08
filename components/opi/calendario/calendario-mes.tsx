@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmar } from "@/lib/opi/confirmar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, Card, type BadgeTone } from "@/components/opi";
 import { temAviso } from "@/lib/opi/aviso";
@@ -102,7 +103,7 @@ export function CalendarioMes() {
 
   async function aprovarMes() {
     if (
-      !window.confirm(
+      !await confirmar(
         `Aprovar ${rascunhos.length} rascunho(s) de ${nomeMes(mes)}? Eles serão publicados sozinhos na data e hora marcadas.`,
       )
     )

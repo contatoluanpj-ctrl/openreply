@@ -10,7 +10,7 @@ export interface BadgeProps {
 }
 
 const TONE_CLASS: Record<BadgeTone, string> = {
-  neutral: "border-white/10 bg-white/[0.04] text-muted",
+  neutral: "border-[#111217]/10 bg-white/50 text-muted",
   success: "border-success/40 bg-success/10 text-success",
   error: "border-error/40 bg-error/10 text-error",
 };

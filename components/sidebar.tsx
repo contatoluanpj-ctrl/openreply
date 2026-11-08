@@ -27,8 +27,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Visão geral",
     items: [
-      { label: "Resumo", href: "/dashboard/visao-geral" },
-      { label: "Painel do Instagram", href: "/dashboard", exact: true },
+      { label: "Dashboard", href: "/dashboard", exact: true },
     ],
   },
   {
@@ -93,10 +92,10 @@ export default function Sidebar({
       <aside
         className={`
           fixed top-0 left-0 z-50 h-dvh w-64 max-w-[85vw] shrink-0 flex flex-col
-          bg-[#070707] border-r border-border
+          bg-[#eef1f4] border-r border-border
           transition-transform duration-200 ease-out
           lg:relative lg:m-4 lg:mr-0 lg:h-[calc(100%-2rem)] lg:w-[236px] lg:translate-x-0 lg:z-10
-          lg:rounded-[24px] lg:border lg:bg-white/[0.03] lg:backdrop-blur-xl
+          lg:rounded-[24px] lg:border lg:bg-white/45 lg:backdrop-blur-xl
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
@@ -106,13 +105,13 @@ export default function Sidebar({
           style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top))" }}
         >
           <Link
-            href="/dashboard/visao-geral"
+            href="/dashboard"
             onClick={onClose}
             className="flex flex-col gap-2 text-foreground"
           >
             <span
               aria-hidden="true"
-              className="block h-8 w-[88px] shrink-0 bg-foreground drop-shadow-[0_0_24px_rgba(255,255,255,0.25)]"
+              className="block h-8 w-[88px] shrink-0 bg-foreground drop-shadow-[0_0_24px_rgba(217,84,30,0.35)]"
               style={{
                 WebkitMaskImage: "url(/opi-logo.svg)",
                 maskImage: "url(/opi-logo.svg)",
@@ -124,7 +123,7 @@ export default function Sidebar({
                 maskPosition: "left center",
               }}
             />
-            <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/45">OPI Central</span>
+            <span className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#111217]/50">OPI Central</span>
           </Link>
         </div>
 
@@ -134,7 +133,7 @@ export default function Sidebar({
         >
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
-              <p className="px-3 pb-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/40">
+              <p className="px-3 pb-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#111217]/45">
                 {group.label}
               </p>
               <div className="space-y-1">
@@ -150,8 +149,8 @@ export default function Sidebar({
                         block rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors
                         ${
                           isActive
-                            ? "bg-white/10 text-white shadow-[inset_2px_0_0_#fff]"
-                            : "text-white/60 hover:bg-white/5 hover:text-white"
+                            ? "bg-[#D9541E]/12 text-[#111217] shadow-[inset_2px_0_0_#D9541E]"
+                            : "text-[#111217]/65 hover:bg-white/60 hover:text-[#111217]"
                         }
                       `}
                     >

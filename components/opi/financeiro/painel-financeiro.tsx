@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmar } from "@/lib/opi/confirmar";
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Card, StatTile } from "@/components/opi";
 import {
@@ -57,7 +58,7 @@ export function PainelFinanceiro() {
   }, [carregar]);
 
   async function apagar(l: LancamentoJson) {
-    if (!window.confirm(`Apagar "${l.descricao}" (${formatarBRL(paraCentavos(l.valor))})? Não dá para desfazer.`)) {
+    if (!await confirmar(`Apagar "${l.descricao}" (${formatarBRL(paraCentavos(l.valor))})? Não dá para desfazer.`)) {
       return;
     }
     const res = await fetch(`/api/opi/financeiro/${l.id}`, { method: "DELETE" });

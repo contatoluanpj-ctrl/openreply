@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmar } from "@/lib/opi/confirmar";
 import { useState } from "react";
 import { Badge } from "@/components/opi";
 import { AVISO_OBRIGATORIO, temAviso } from "@/lib/opi/aviso";
@@ -69,7 +70,7 @@ export function EditorPost({ post, diaInicial, onSalvo, onFechar }: EditorPostPr
   }
 
   async function excluir() {
-    if (!post || !window.confirm("Apagar este post do calendário?")) return;
+    if (!post || !await confirmar("Apagar este post do calendário?")) return;
     setSalvando(true);
     setErro(null);
     try {
