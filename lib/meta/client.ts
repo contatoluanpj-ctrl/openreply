@@ -678,7 +678,8 @@ export async function getConversationMessages(
   url.searchParams.set("fields", "messages{id,created_time,from,to,message}");
   url.searchParams.set("access_token", accessToken);
 
-  const response = await fetch(url.toString());
+  // Mesmo teto da lista de conversas: a Caixa de entrada não fica presa esperando a Meta.
+  const response = await fetch(url.toString(), { signal: AbortSignal.timeout(10_000) });
   const data = await handleResponse<{ messages?: { data: InstagramMessage[] } }>(
     response
   );

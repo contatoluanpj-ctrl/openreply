@@ -1,36 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentWorkspaceId } from "@/lib/auth";
 import { getWorkspaceInstagramAccount } from "@/lib/instagram-accounts";
+import { createInstagramContext, getConversations, sendDirectMessage } from "@/lib/instagram/provider";
 import {
-  getConversations,
-  sendDirectMessage,
-  MetaApiError,
-} from "@/lib/instagram/provider";
-import { createInstagramContext } from "@/lib/instagram/provider";
+  ERRO_SEM_CONTA,
+  erroInbox,
+  modoInbox,
+  montarConversas,
+  type ConversationListItem,
+  type ModoInbox,
+} from "@/lib/instagram/inbox";
 
-export interface ConversationListItem {
-  id: string;
-  detailsUnavailable?: boolean;
-  contact: { id: string; username: string | null };
-  updatedTime: string | null;
-  lastMessage: {
-    text: string;
-    fromMe: boolean;
-    createdTime: string | null;
-  } | null;
-}
+export type { ConversationListItem } from "@/lib/instagram/inbox";
+
+export const dynamic = "force-dynamic";
 
 export interface ConversationsResponse {
   conversations: ConversationListItem[];
   account: { id: string; username: string; instagramId: string };
+  modo: ModoInbox;
 }
 
-// List the account's DM conversations for the inbox.
+function falha(erro: { status: number; codigo: string; mensagem: string }) {
+  return NextResponse.json(
+    { success: false, error: erro.mensagem, codigo: erro.codigo },
+    { status: erro.status }
+  );
+}
+
+// Lista as conversas de DM da conta para a Caixa de entrada (Login do Facebook ou do Instagram).
 export async function GET(request: NextRequest) {
   const workspaceId = await getCurrentWorkspaceId();
   if (!workspaceId) {
     return NextResponse.json(
-      { success: false, error: "Unauthorized" },
+      { success: false, error: "Sessão expirada. Entre de novo.", codigo: "sessao" },
       { status: 401 }
     );
   }
@@ -39,127 +42,65 @@ export async function GET(request: NextRequest) {
     workspaceId,
     request.nextUrl.searchParams.get("instagramAccountId")
   );
-  if (!account) {
-    return NextResponse.json(
-      { success: false, error: "Instagram account not connected." },
-      { status: 400 }
-    );
-  }
+  if (!account) return falha(ERRO_SEM_CONTA);
 
   try {
-    const accessToken = await createInstagramContext(account);
-    const raw = await getConversations({
-      context: accessToken,
-      igUserId: account.instagramId,
-    });
-
-    const conversations: ConversationListItem[] = raw.map((c) => {
-      const participants = c.participants?.data ?? [];
-      const contact =
-        participants.find((p) => p.id !== account.instagramId) ?? null;
-      const last = c.messages?.data?.[0] ?? null;
-
-      return {
-        id: c.id,
-        detailsUnavailable: c.detailsUnavailable,
-        contact: {
-          id: contact?.id ?? "",
-          username: contact?.username ?? null,
-        },
-        updatedTime: c.updated_time ?? null,
-        lastMessage: last
-          ? {
-              text: last.message ?? "",
-              fromMe: last.from?.id === account.instagramId,
-              createdTime: last.created_time ?? null,
-            }
-          : null,
-      };
-    });
-
+    const context = await createInstagramContext(account);
+    const raw = await getConversations({ context, igUserId: account.instagramId });
     const data: ConversationsResponse = {
-      conversations,
-      account: {
-        id: account.id,
-        username: account.username,
-        instagramId: account.instagramId,
-      },
+      conversations: montarConversas(raw, account.instagramId),
+      account: { id: account.id, username: account.username, instagramId: account.instagramId },
+      modo: modoInbox(account.provider),
     };
     return NextResponse.json({ success: true, data });
   } catch (err) {
-    console.error("[Conversations] Error:", err);
-    const message =
-      err instanceof MetaApiError
-        ? err.message
-        : "Failed to load conversations";
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 }
-    );
+    const erro = erroInbox(err, "carregar as conversas");
+    console.error("[Inbox] Falha ao listar conversas:", erro.codigo, err instanceof Error ? err.name : "erro");
+    return falha(erro);
   }
 }
 
-// Send a direct message reply.
+// Responde uma DM (sujeito à janela de 24 horas do Instagram).
 export async function POST(request: NextRequest) {
   const workspaceId = await getCurrentWorkspaceId();
   if (!workspaceId) {
     return NextResponse.json(
-      { success: false, error: "Unauthorized" },
+      { success: false, error: "Sessão expirada. Entre de novo.", codigo: "sessao" },
       { status: 401 }
     );
   }
 
-  let body: {
-    instagramAccountId?: string;
-    recipientId?: string;
-    text?: string;
-  };
+  let body: { instagramAccountId?: string; recipientId?: string; text?: string };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      { success: false, error: "Invalid request body" },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, error: "Pedido inválido." }, { status: 400 });
   }
 
   const text = body.text?.trim();
   if (!body.recipientId || !text) {
     return NextResponse.json(
-      { success: false, error: "A recipient and message are required." },
+      { success: false, error: "Escolha a conversa e escreva a mensagem." },
       { status: 400 }
     );
   }
 
-  const account = await getWorkspaceInstagramAccount(
-    workspaceId,
-    body.instagramAccountId ?? null
-  );
-  if (!account) {
-    return NextResponse.json(
-      { success: false, error: "Instagram account not connected." },
-      { status: 400 }
-    );
-  }
+  const account = await getWorkspaceInstagramAccount(workspaceId, body.instagramAccountId ?? null);
+  if (!account) return falha(ERRO_SEM_CONTA);
 
   try {
-    const accessToken = await createInstagramContext(account);
+    const context = await createInstagramContext(account);
     const result = await sendDirectMessage({
-      context: accessToken,
+      context,
       instagramAccountId: account.instagramId,
       userId: body.recipientId,
       message: text,
     });
     return NextResponse.json({ success: true, data: result });
   } catch (err) {
-    console.error("[Conversations] Send error:", err);
-    // Surface Meta's own message — the common case is the 24-hour messaging
-    // window having closed, which the user needs to see explicitly.
-    const message =
-      err instanceof MetaApiError ? err.message : "Failed to send message";
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 502 }
-    );
+    // O caso comum é a janela de 24 horas fechada: a mensagem da Meta vai junto para o Luan ver.
+    const erro = erroInbox(err, "enviar a mensagem");
+    console.error("[Inbox] Falha ao enviar:", erro.codigo, err instanceof Error ? err.name : "erro");
+    return falha(erro);
   }
 }
