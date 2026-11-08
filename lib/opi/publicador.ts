@@ -174,6 +174,23 @@ export function publicadorLigado(chaveWorkspace = false): boolean {
 }
 
 const LIMITE_POR_RODADA = 5;
+
+/**
+ * Campanha "próximo Reel" (pendingNextReel) do mesmo workspace passa a valer na hora em que o Reel sai,
+ * sem esperar a busca de 5 min do worker: comentário dos primeiros minutos já casa com a campanha.
+ * Falha aqui não desfaz a publicação (o worker prende de novo na próxima busca).
+ */
+async function prenderCampanhasAoReel(post: { workspaceId?: string }, r: ResultadoPublicacao): Promise<void> {
+  if (!post.workspaceId) return;
+  try {
+    await prisma.automation.updateMany({
+      where: { workspaceId: post.workspaceId, pendingNextReel: true },
+      data: { postId: r.mediaId, postUrl: r.permalink, pendingNextReel: false },
+    });
+  } catch (e) {
+    console.error("[OPI Publicador] Reel publicado, mas a campanha não foi presa agora", e instanceof Error ? e.message : e);
+  }
+}
 const PUBLICANDO_TRAVADO_MS = 30 * 60_000;
 
 export type ResumoRodada = {
@@ -284,6 +301,7 @@ export async function rodarPublicador(
           data: { status: "PUBLICADO", mediaId: r.mediaId, permalink: r.permalink, erro: null },
         });
         resumo.publicados++;
+        if (post.tipo === "REEL") await prenderCampanhasAoReel(post, r);
       } catch (e) {
         const msg = semToken(e instanceof Error ? e.message : "Erro desconhecido", deps.token);
         await prisma.postAgendado.update({ where: { id: post.id }, data: { status: "ERRO", erro: msg } });
