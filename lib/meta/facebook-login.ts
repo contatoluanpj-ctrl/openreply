@@ -1,8 +1,30 @@
 import { prisma } from "@/lib/db/client";
 import { canConnectInstagramAccount } from "@/lib/instagram-accounts";
 import { getUserInfo, subscribeInstagramAccountToWebhooks } from "@/lib/meta/client";
-import { facebookPageAccessToken } from "@/lib/meta/login-mode";
+import { getMetaGraphApiVersion } from "@/lib/env";
+import { facebookPageAccessToken, facebookPageId } from "@/lib/meta/login-mode";
 import { encryptToken } from "@/lib/meta/oauth";
+
+/**
+ * META_PAGE_ACCESS_TOKEN may hold the system-user token itself (what Business
+ * Manager shows after "Gerar token") or the Page token derived from it. Asking
+ * the Page for its access_token with either one returns the Page token, so the
+ * owner never has to do the exchange by hand. If Meta returns none (the token
+ * cannot see the Page), the original token is kept and the next call reports
+ * the real permission error.
+ */
+export async function resolvePageAccessToken(token: string): Promise<string> {
+  const url = new URL(`https://graph.facebook.com/${getMetaGraphApiVersion()}/${facebookPageId()}`);
+  url.searchParams.set("fields", "access_token");
+  url.searchParams.set("access_token", token);
+  try {
+    const response = await fetch(url.toString());
+    const data = (await response.json()) as { access_token?: string };
+    return response.ok && data.access_token ? data.access_token : token;
+  } catch {
+    return token;
+  }
+}
 
 export type FacebookLoginConnectResult =
   | { ok: true; instagramId: string; username: string; webhookSubscribed: boolean }
@@ -17,7 +39,7 @@ export type FacebookLoginConnectResult =
 export async function connectFacebookLoginAccount(
   workspaceId: string
 ): Promise<FacebookLoginConnectResult> {
-  const token = facebookPageAccessToken();
+  const token = await resolvePageAccessToken(facebookPageAccessToken());
   const userInfo = await getUserInfo(token);
   const instagramId = userInfo.user_id ?? userInfo.id;
 

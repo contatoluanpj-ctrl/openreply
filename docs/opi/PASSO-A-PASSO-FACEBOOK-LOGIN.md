@@ -40,11 +40,10 @@ No app "OPI Publicador", vá em Casos de uso → API do Instagram → Permissõe
    - app: OPI Publicador;
    - validade: **Nunca**;
    - marque as permissões do passo 1 e `business_management`.
-4. Para trocar esse token pelo token da Página, abra no navegador
-   `https://graph.facebook.com/v25.0/1427009743825386?fields=access_token&access_token=` seguido do token do passo 3.
-   O `access_token` da resposta é o token da Página.
-5. Cole esse valor em `META_PAGE_ACCESS_TOKEN=` no `C:\opi-work\openreply\.env`.
-6. Em Configurações do app → Básico, clique em **Mostrar** na Chave Secreta do Aplicativo e cole em `FACEBOOK_APP_SECRET=`.
+4. **Copie o token gerado e cole em `META_PAGE_ACCESS_TOKEN=`**, no `C:\opi-work\openreply\.env`, na Vercel (Settings →
+   Environment Variables) e no Easypanel (Environment do `openreply-worker`). Não precisa trocar pelo token da Página:
+   o OpenReply faz isso sozinho ao conectar (desde 08/11).
+5. Em Configurações do app → Básico, clique em **Mostrar** na Chave Secreta do Aplicativo e cole em `FACEBOOK_APP_SECRET=`.
 
 ## 3. Webhooks
 

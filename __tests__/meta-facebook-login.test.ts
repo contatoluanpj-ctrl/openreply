@@ -8,6 +8,8 @@ import {
   subscribeInstagramAccountToWebhooks,
 } from "@/lib/meta/client";
 import { getMissingInstagramOAuthEnv } from "@/lib/env";
+vi.mock("@/lib/db/client", () => ({ prisma: {} }));
+import { resolvePageAccessToken } from "@/lib/meta/facebook-login";
 
 const fetchMock = vi.fn();
 function respond(body: unknown, status = 200) {
@@ -70,6 +72,18 @@ describe("Meta client with Facebook Login (META_LOGIN=facebook)", () => {
     expect(urlOf().pathname).toBe("/v25.0/PAGE1/subscribed_apps");
     const body = JSON.parse(String(fetchMock.mock.calls[0][1].body));
     expect(body.subscribed_fields).toEqual(["messages", "messaging_postbacks"]);
+  });
+
+  it("trades the system-user token for the Page token", async () => {
+    respond({ access_token: "PAGE_TOKEN", id: "PAGE1" });
+    expect(await resolvePageAccessToken("SYSTEM_TOKEN")).toBe("PAGE_TOKEN");
+    expect(urlOf().pathname).toBe("/v25.0/PAGE1");
+    expect(urlOf().searchParams.get("fields")).toBe("access_token");
+  });
+
+  it("keeps the given token when the Page returns none", async () => {
+    respond({ error: { message: "no", code: 100 } }, 400);
+    expect(await resolvePageAccessToken("SYSTEM_TOKEN")).toBe("SYSTEM_TOKEN");
   });
 
   it("asks for the Page token and ids instead of the Instagram app", () => {
