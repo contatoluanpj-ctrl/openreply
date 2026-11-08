@@ -1,204 +1,185 @@
-"use client";
+// Dashboard principal do OPI Central (substitui o antigo painel do Instagram do OpenReply e a Visão geral).
+// Layout do Painel OPI: cabeçalho, faixa de KPIs, cards por rede, gráficos para decidir e pendências.
+// Só leitura e só dados do banco (lib/opi/dashboard-dados.ts e lib/opi/visao-geral.ts).
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Badge, PageHeader } from "@/components/opi";
+import { Kpi, Pendencias, Plataforma } from "@/components/opi/dashboard/blocos";
+import { brl, numero, pct } from "@/components/opi/dashboard/formato";
+import {
+  GraficoAudiencia,
+  GraficoDms,
+  GraficoHorario,
+  GraficoPalavras,
+  GraficoSeguidores,
+} from "@/components/opi/dashboard/graficos";
+import { getCurrentWorkspaceId } from "@/lib/auth";
+import { prisma } from "@/lib/db/client";
+import { carregarDashboard } from "@/lib/opi/dashboard-dados";
+import { LINKS, carregarVisaoGeral, montarPendencias, type Bloco } from "@/lib/opi/visao-geral";
 
-/**
- * Dashboard Home Page
- *
- * Overview cards, 7-day chart, and recent activity feed.
- */
+export const dynamic = "force-dynamic";
 
-import { useI18n } from "@/lib/i18n/provider";
-import { useEffect, useState } from "react";
-import AccountSelect, { type AccountOption } from "@/components/account-select";
-import StatCard from "@/components/stat-card";
-import StatusBadge from "@/components/status-badge";
+const TRACO = "—";
+const INDISPONIVEL = "Indisponível agora";
 
-interface DashboardStats {
-  userName: string | null;
-  contactsCount: number;
-  totalAutomations: number;
-  activeAutomations: number;
-  dmsSentToday: number;
-  dmsSentWeek: number;
-  dmsSentMonth: number;
-  dmsSkippedMonth: number;
-  dmsFailedMonth: number;
-  totalDMs: number;
-  clicksThisMonth: number;
-  totalClicks: number;
-  ctrThisMonth: number;
-  instagramAccounts: AccountOption[];
-  selectedInstagramAccountId: string | null;
-  topKeywords: { keyword: string; count: number }[];
-  dailyDMs: { date: string; count: number }[];
-  recentLogs: Array<{
-    id: string;
-    commenterName: string | null;
-    commentText: string;
-    status: string;
-    createdAt: string;
-    automation: { name: string };
-    instagramAccount?: { username: string };
-  }>;
+function seOk<T>(b: Bloco<T>, f: (d: T) => string, vazio = TRACO): string {
+  return b.ok ? f(b.dados) : vazio;
 }
 
-export default function DashboardPage() {
-  const { t, label } = useI18n();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedAccountId, setSelectedAccountId] = useState("all");
+const fmtHora = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const fmtMes = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", month: "long" });
 
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (selectedAccountId !== "all") {
-      params.set("instagramAccountId", selectedAccountId);
-    }
-
-    fetch(`/api/dashboard/stats${params.size ? `?${params}` : ""}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) setStats(data.data);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [selectedAccountId]);
-
-  function handleAccountChange(accountId: string) {
-    setLoading(true);
-    setSelectedAccountId(accountId);
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="panel rounded p-5 h-32">
-              <div className="w-10 h-10 rounded bg-surface-hover" />
-              <div className="mt-4 h-6 w-16 bg-surface-hover rounded" />
-              <div className="mt-2 h-4 w-24 bg-surface-hover/60 rounded" />
-            </div>
-          ))}
-        </div>
+function TituloSecao({ titulo, nota, href, link }: { titulo: string; nota: string; href?: string; link?: string }) {
+  return (
+    <div className="mb-4 mt-12 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 className="font-display text-[22px] font-extrabold tracking-tight text-foreground">{titulo}</h2>
+        <p className="mt-1 max-w-[70ch] text-[13px] text-muted">{nota}</p>
       </div>
-    );
-  }
+      {href && link && (
+        <Link href={href} className="text-xs font-semibold text-accent hover:underline">
+          {link} →
+        </Link>
+      )}
+    </div>
+  );
+}
 
-  const maxDM = Math.max(...(stats?.dailyDMs.map((d) => d.count) ?? [1]), 1);
+export default async function DashboardPage() {
+  const workspaceId = await getCurrentWorkspaceId();
+  if (!workspaceId) redirect("/login");
 
-  const connectedCount = stats?.instagramAccounts.length ?? 0;
+  const agora = new Date();
+  const [d, v] = await Promise.all([carregarDashboard(prisma, workspaceId, agora), carregarVisaoGeral(prisma, workspaceId, agora)]);
+  const pendencias = montarPendencias(v);
+  const erros = pendencias.filter((p) => p.nivel === "erro").length;
+  const { seguidores, dms7d, taxa, posts, gasto } = d.kpis;
+  const mes = fmtMes.format(agora);
 
   return (
-    <div className="space-y-8">
-      {/* Greeting header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
-            {t("Hello, {name}!", { name: stats?.userName ?? t("there") })}
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            {t(connectedCount === 1 ? "{count} connected account" : "{count} connected accounts", { count: connectedCount })}
-            {" · "}
-            {t(stats?.contactsCount === 1 ? "{count} contact" : "{count} contacts", { count: stats?.contactsCount ?? 0 })}
-            {" · "}
-            <a href="/logs" className="text-accent hover:underline">
-              {t("See activity")}
-            </a>
-          </p>
-        </div>
-        {stats && stats.instagramAccounts.length > 1 && (
-          <AccountSelect
-            accounts={stats.instagramAccounts}
-            value={selectedAccountId}
-            onChange={handleAccountChange}
-          />
-        )}
-      </div>
+    <div className="pb-10">
+      <PageHeader
+        title="Dashboard"
+        description="O estado da OPI em uma tela: audiência, DMs, conteúdo, dinheiro e o que depende de você."
+        actions={
+          <>
+            <span className="text-xs text-muted">Atualizado em {fmtHora.format(agora)}</span>
+            {pendencias.length === 0 ? (
+              <Badge tone="success">Tudo em dia</Badge>
+            ) : (
+              <a href="#pendencias">
+                <Badge tone={erros > 0 ? "error" : "neutral"}>
+                  {pendencias.length} {pendencias.length === 1 ? "pendência" : "pendências"}
+                </Badge>
+              </a>
+            )}
+          </>
+        }
+      />
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
-        <StatCard
-          label={t("Active Campaigns")}
-          value={stats?.activeAutomations ?? 0}
+      <section aria-label="Resumo" className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <Kpi
+          icone="users"
+          rotulo="Seguidores"
+          href={LINKS.redes}
+          valor={seOk(seguidores, (s) => (s.valor !== null ? numero(s.valor) : TRACO))}
+          delta={seguidores.ok ? seguidores.dados.delta : null}
+          dica={
+            !seguidores.ok
+              ? INDISPONIVEL
+              : seguidores.dados.redes > 0
+                ? `${seguidores.dados.redes} ${seguidores.dados.redes === 1 ? "rede" : "redes"} · variação em 7 dias`
+                : "Nenhuma rede coletada ainda"
+          }
         />
-        <StatCard label={t("DMs Sent")} value={stats?.dmsSentMonth ?? 0} />
-        <StatCard label={t("Skipped")} value={stats?.dmsSkippedMonth ?? 0} />
-        <StatCard label={t("Failed")} value={stats?.dmsFailedMonth ?? 0} />
-        <StatCard label={t("Clicks")} value={stats?.clicksThisMonth ?? 0} />
-        <StatCard label={t("CTR")} value={`${stats?.ctrThisMonth ?? 0}%`} />
-      </div>
+        <Kpi
+          icone="msg"
+          rotulo="DMs enviadas 7d"
+          href={LINKS.registroDms}
+          valor={seOk(dms7d, (x) => numero(x.valor ?? 0))}
+          delta={dms7d.ok ? dms7d.dados.delta : null}
+          dica={dms7d.ok ? `${numero(dms7d.dados.anterior ?? 0)} nos 7 dias anteriores` : INDISPONIVEL}
+        />
+        <Kpi
+          icone="act"
+          rotulo="Comentário → DM"
+          href={LINKS.palavras}
+          valor={seOk(taxa, (x) => (x.valor !== null ? pct(x.valor) : TRACO))}
+          delta={taxa.ok ? taxa.dados.delta : null}
+          pp
+          dica={
+            taxa.ok
+              ? taxa.dados.comentarios > 0
+                ? `${numero(taxa.dados.enviadas)} de ${numero(taxa.dados.comentarios)} comentários em 30 dias`
+                : "Sem comentários de campanha em 30 dias"
+              : INDISPONIVEL
+          }
+        />
+        <Kpi
+          icone="play"
+          rotulo="Posts no mês"
+          href={LINKS.calendario}
+          valor={seOk(posts, (x) => numero(x.valor ?? 0))}
+          delta={posts.ok ? posts.dados.delta : null}
+          dica={posts.ok ? `publicados em ${mes} · ${numero(posts.dados.agendados)} agendados` : INDISPONIVEL}
+        />
+        <Kpi
+          icone="coin"
+          rotulo="Gasto do mês"
+          href={LINKS.financeiro}
+          valor={seOk(gasto, (x) => brl(x.valor ?? 0))}
+          delta={gasto.ok ? gasto.dados.delta : null}
+          dica={gasto.ok ? `pago em ${mes} · ${brl(gasto.dados.previsto)} previstos` : INDISPONIVEL}
+        />
+      </section>
 
-      {/* Chart + Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 sm:gap-6">
-        {/* 7-Day Chart */}
-        <div className="lg:col-span-3 panel rounded p-4 sm:p-6">
-          <h2 className="text-sm font-semibold text-foreground mb-6">{t("DMs — Last 7 Days")}</h2>
-          <div className="flex items-end gap-1.5 h-40 sm:gap-2">
-            {stats?.dailyDMs.map((day) => (
-              <div key={label(day.date)} className="min-w-0 flex-1 h-full flex flex-col items-center gap-2">
-                <span className="text-xs text-muted font-medium">{day.count}</span>
-                {/* A percentage height needs a parent with a definite height, so
-                    the bar sits in a wrapper that fills the column's free space. */}
-                <div className="w-full min-h-0 flex-1 flex items-end">
-                  <div
-                    className="w-full rounded-sm bg-accent min-h-[4px]"
-                    style={{ height: `${Math.max((day.count / maxDM) * 100, 4)}%` }}
-                  />
-                </div>
-                {/* Seven labels share a phone's width, so they must not wrap. */}
-                <span className="w-full truncate text-center text-[10px] text-zinc-500">
-                  {label(day.date)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+      <TituloSecao
+        titulo="Redes"
+        nota="Um card por rede com dados coletados. O número grande é a audiência; a variação compara com 7 dias antes."
+        href={LINKS.redes}
+        link="Abrir redes"
+      />
+      {!d.plataformas.ok ? (
+        <p className="opi-tile text-sm text-muted">
+          {d.plataformas.motivo === "sem_tabela"
+            ? "Tabela das redes ainda não criada no banco (migration do OPI Central pendente)."
+            : "Não foi possível carregar as redes agora. Tente recarregar a página."}
+        </p>
+      ) : d.plataformas.dados.length === 0 ? (
+        <p className="opi-tile text-sm text-muted">
+          Nenhuma rede com dados ainda. Os cards aparecem quando o coletor das Redes enviar o primeiro snapshot ou o
+          Instagram registrar seguidores.
+        </p>
+      ) : (
+        <section aria-label="Redes" className="flex flex-wrap justify-center gap-4">
+          {d.plataformas.dados.map((c) => (
+            <Plataforma key={c.rede} card={c} />
+          ))}
+        </section>
+      )}
 
-        {/* Top Keywords */}
-        <div className="lg:col-span-1 panel rounded p-4 sm:p-6">
-          <h2 className="text-sm font-semibold text-foreground mb-4">{t("Top Keywords")}</h2>
-          <div className="space-y-3">
-            {stats?.topKeywords.length === 0 && (
-              <p className="text-sm text-muted py-8">{t("No keyword matches yet")}</p>
-            )}
-            {stats?.topKeywords.map((keyword) => (
-              <div key={keyword.keyword} className="flex items-center justify-between gap-3">
-                <span className="truncate text-sm font-medium text-foreground">
-                  {keyword.keyword}
-                </span>
-                <span className="text-xs text-muted">{keyword.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+      <TituloSecao
+        titulo="Para decidir"
+        nota="Cada gráfico responde uma pergunta: o que postar mais, se a DM converte e quando a audiência está acordada."
+      />
+      <section aria-label="Gráficos" className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <GraficoSeguidores bloco={d.seguidores} className="lg:col-span-2" />
+        <GraficoAudiencia bloco={d.audiencia} />
+        <GraficoDms bloco={d.dms} className="lg:col-span-2" />
+        <GraficoPalavras bloco={d.palavras} />
+        <GraficoHorario bloco={d.horario} className="lg:col-span-3" />
+      </section>
 
-        {/* Recent Activity */}
-        <div className="lg:col-span-2 panel rounded p-4 sm:p-6">
-          <h2 className="text-sm font-semibold text-foreground mb-4">{t("Recent Activity")}</h2>
-          <div className="space-y-3 max-h-60 overflow-y-auto">
-            {stats?.recentLogs.length === 0 && (
-              <p className="text-sm text-muted text-center py-8">{t("No activity yet")}</p>
-            )}
-            {stats?.recentLogs.map((log) => (
-              <div
-                key={log.id}
-                className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    @{log.commenterName ?? "unknown"}
-                  </p>
-                  <p className="text-xs text-muted truncate">
-                    {log.instagramAccount
-                      ? `@${log.instagramAccount.username} · `
-                      : ""}
-                    {log.commentText}
-                  </p>
-                </div>
-                <StatusBadge status={log.status} />
-              </div>
-            ))}
-          </div>
-        </div>
+      <div id="pendencias" className="scroll-mt-6">
+        <TituloSecao titulo="Pendências" nota="O que depende de você agora, com o atalho para resolver." />
+        <Pendencias itens={pendencias} />
       </div>
     </div>
   );
