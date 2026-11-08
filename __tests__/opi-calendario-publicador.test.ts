@@ -3,13 +3,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const { mockPrisma } = vi.hoisted(() => ({
   mockPrisma: {
     postAgendado: { findMany: vi.fn(), updateMany: vi.fn(), update: vi.fn() },
+    workspace: { findMany: vi.fn() },
   },
 }));
 
 vi.mock("@/lib/db/client", () => ({ prisma: mockPrisma }));
 vi.mock("@/lib/meta/facebook-login", () => ({ resolvePageAccessToken: vi.fn(async (t: string) => t) }));
 
-import { publicarPost, rodarPublicador, type PublicarDeps } from "@/lib/opi/publicador";
+import { publicadorLigado, publicarPost, rodarPublicador, type PublicarDeps } from "@/lib/opi/publicador";
 import { AVISO_OBRIGATORIO, temAviso } from "@/lib/opi/aviso";
 
 const TOKEN = "TOKEN-SECRETO-123";
@@ -222,5 +223,92 @@ describe("rodarPublicador", () => {
     expect(gravado.erro).not.toContain(TOKEN);
     expect(JSON.stringify(erroLog.mock.calls)).not.toContain(TOKEN);
     erroLog.mockRestore();
+  });
+});
+
+describe("chave da publicação automática no painel (Workspace.opiPublicadorLigado)", () => {
+  const agora = new Date("2026-11-20T21:00:00Z");
+  const DEPS = { fetch: vi.fn() as unknown as typeof fetch, token: TOKEN, igUserId: "IG1", versao: "v25.0" };
+  const aprovado = {
+    id: "p1",
+    workspaceId: "w1",
+    tipo: "POST" as const,
+    midias: ["https://a/1.png"],
+    legenda: LEGENDA,
+    agendadoPara: new Date("2026-11-20T20:59:00Z"),
+    status: "APROVADO",
+    aprovadoEm: new Date(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.OPI_PUBLICADOR;
+    mockPrisma.postAgendado.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.postAgendado.update.mockResolvedValue({});
+  });
+
+  it("publicadorLigado: env on OU chave do workspace", () => {
+    expect(publicadorLigado()).toBe(false);
+    expect(publicadorLigado(false)).toBe(false);
+    expect(publicadorLigado(true)).toBe(true);
+    process.env.OPI_PUBLICADOR = "on";
+    expect(publicadorLigado(false)).toBe(true);
+    delete process.env.OPI_PUBLICADOR;
+  });
+
+  it("env desligado e nenhuma chave ligada: não lê post nenhum", async () => {
+    mockPrisma.workspace.findMany.mockResolvedValue([]);
+    const r = await rodarPublicador(agora, DEPS);
+    expect(r.ligado).toBe(false);
+    expect(mockPrisma.workspace.findMany).toHaveBeenCalledWith({
+      where: { opiPublicadorLigado: true, instagramAccounts: { some: { instagramId: "IG1" } } },
+      select: { id: true },
+    });
+    expect(mockPrisma.postAgendado.findMany).not.toHaveBeenCalled();
+    expect(mockPrisma.postAgendado.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("chave ligada: só busca APROVADO do workspace liberado e publica", async () => {
+    mockPrisma.workspace.findMany.mockResolvedValue([{ id: "w1" }]);
+    mockPrisma.postAgendado.findMany.mockResolvedValue([aprovado]);
+    const g = graphFalso([{ id: "img" }, { id: "m9" }, { permalink: "https://instagram.com/p/9" }]);
+    const r = await rodarPublicador(agora, { ...DEPS, fetch: g.fn });
+    expect(r).toMatchObject({ ligado: true, workspaces: ["w1"], publicados: 1 });
+    expect(mockPrisma.postAgendado.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          workspaceId: { in: ["w1"] },
+          status: "APROVADO",
+          aprovadoEm: { not: null },
+          agendadoPara: { lte: agora },
+        },
+      }),
+    );
+  });
+
+  it("chave ligada não afrouxa a trava do aviso: legenda sem aviso vira ERRO sem chamar a Graph", async () => {
+    mockPrisma.workspace.findMany.mockResolvedValue([{ id: "w1" }]);
+    mockPrisma.postAgendado.findMany.mockResolvedValue([{ ...aprovado, legenda: "Sem aviso" }]);
+    const f = vi.fn();
+    const r = await rodarPublicador(agora, { ...DEPS, fetch: f as unknown as typeof fetch });
+    expect(r.erros).toBe(1);
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it("post de outro workspace que escapar do filtro é pulado, sem trava nem publicação", async () => {
+    mockPrisma.workspace.findMany.mockResolvedValue([{ id: "w1" }]);
+    mockPrisma.postAgendado.findMany.mockResolvedValue([{ ...aprovado, workspaceId: "w2" }]);
+    const f = vi.fn();
+    const r = await rodarPublicador(agora, { ...DEPS, fetch: f as unknown as typeof fetch });
+    expect(r.pulados).toBe(1);
+    expect(f).not.toHaveBeenCalled();
+    // Só a varredura de PUBLICANDO travado rodou; a trava APROVADO -> PUBLICANDO não.
+    expect(mockPrisma.postAgendado.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("sem META_IG_USER_ID não há conta para publicar: nem consulta o banco", async () => {
+    const r = await rodarPublicador(agora);
+    expect(r.ligado).toBe(false);
+    expect(mockPrisma.workspace.findMany).not.toHaveBeenCalled();
   });
 });

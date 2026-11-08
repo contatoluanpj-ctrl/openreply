@@ -75,6 +75,12 @@ model Workspace {
   usagePeriodStart  DateTime @default(now())
   dmsSentThisPeriod Int      @default(0)
 
+  // OPI Central: chave da publicação automática ligada no painel (vale junto com OPI_PUBLICADOR=on).
+  // Só publica post APROVADO com o aviso na legenda; a chave não afrouxa nenhuma trava.
+  opiPublicadorLigado      Boolean   @default(false)
+  opiPublicadorAlteradoEm  DateTime?
+  opiPublicadorAlteradoPor String?
+
   zernioConnection  ZernioConnection?
   members           WorkspaceMember[]
   invitations       WorkspaceInvitation[]

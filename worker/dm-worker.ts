@@ -3,7 +3,7 @@ import { recordWorkerHeartbeat } from "@/lib/ops/worker-health";
 import { reconcileComments } from "@/lib/polling/comment-reconciler";
 import { reenviarAvisosPendentes } from "@/lib/opi/jev-worker";
 import { attachPendingNextReels } from "@/lib/automation/attach-next-reel";
-import { publicadorLigado, rodarPublicador } from "@/lib/opi/publicador";
+import { publicadorLigadoEnv, rodarPublicador } from "@/lib/opi/publicador";
 import os from "node:os";
 
 const worker = createDMWorker();
@@ -57,20 +57,23 @@ async function poll() {
 setTimeout(() => void poll(), 10_000);
 const pollTimer = setInterval(() => void poll(), POLL_INTERVAL_MS);
 
-// OPI Central: publicador do calendário aprovado (D-0026). Desligado até OPI_PUBLICADOR=on.
-const publicadorTimer = publicadorLigado()
-  ? setInterval(() => {
-      void rodarPublicador(new Date()).catch((error) => {
-        console.error("[DM Worker] OPI: publicador falhou:", error instanceof Error ? error.name : "erro");
-      });
-    }, 60_000)
-  : null;
+// OPI Central: publicador do calendário aprovado (D-0026). A rodada roda todo minuto, mas só publica
+// com OPI_PUBLICADOR=on ou com a chave "Publicação automática" ligada no Calendário do painel; sem
+// nenhuma das duas, a rodada é uma consulta à tabela Workspace e mais nada.
+console.log(
+  `[DM Worker] OPI: publicador ${publicadorLigadoEnv() ? "ligado pelo ambiente" : "segue a chave do painel"}`
+);
+const publicadorTimer = setInterval(() => {
+  void rodarPublicador(new Date()).catch((error) => {
+    console.error("[DM Worker] OPI: publicador falhou:", error instanceof Error ? error.name : "erro");
+  });
+}, 60_000);
 
 async function shutdown(signal: string) {
   console.log(`[DM Worker] ${signal} received, closing worker`);
   clearInterval(heartbeatTimer);
   clearInterval(pollTimer);
-  if (publicadorTimer) clearInterval(publicadorTimer);
+  clearInterval(publicadorTimer);
   await worker.close();
   process.exit(0);
 }

@@ -8,7 +8,9 @@ import { temAviso } from "@/lib/opi/aviso";
  * Publicador do calendário do OPI Central.
  *
  * Só publica PostAgendado com status APROVADO (aprovado pelo Luan na tela, D-0026)
- * e com o aviso obrigatório na legenda. Fica desligado até OPI_PUBLICADOR=on.
+ * e com o aviso obrigatório na legenda. Fica desligado até OPI_PUBLICADOR=on OU até a
+ * chave "Publicação automática" ser ligada no Calendário (Workspace.opiPublicadorLigado).
+ * A chave do painel vale só para o workspace dono da conta do Instagram que publica.
  * Usa a Graph API (Facebook Login for Business) com o token da Página.
  */
 
@@ -161,8 +163,14 @@ export async function publicarPost(post: PostParaPublicar, deps: PublicarDeps): 
   return { mediaId, permalink };
 }
 
-export function publicadorLigado(): boolean {
+/** OPI_PUBLICADOR=on no ambiente do worker: liga para todos os workspaces (modo antigo). */
+export function publicadorLigadoEnv(): boolean {
   return (process.env.OPI_PUBLICADOR ?? "").trim().toLowerCase() === "on";
+}
+
+/** Ligado se o ambiente estiver on OU se a chave do workspace estiver ligada no painel. */
+export function publicadorLigado(chaveWorkspace = false): boolean {
+  return publicadorLigadoEnv() || chaveWorkspace === true;
 }
 
 const LIMITE_POR_RODADA = 5;
@@ -170,6 +178,8 @@ const PUBLICANDO_TRAVADO_MS = 30 * 60_000;
 
 export type ResumoRodada = {
   ligado: boolean;
+  /** Workspaces com a chave do painel ligada nesta rodada (vazio quando vale o OPI_PUBLICADOR=on). */
+  workspaces: string[];
   publicados: number;
   erros: number;
   pulados: number;
@@ -186,19 +196,44 @@ export async function rodarPublicador(
   agora: Date = new Date(),
   depsTeste?: Partial<PublicarDeps>,
 ): Promise<ResumoRodada> {
-  const resumo: ResumoRodada = { ligado: publicadorLigado(), publicados: 0, erros: 0, pulados: 0 };
-  if (!resumo.ligado || rodando) return resumo;
+  const resumo: ResumoRodada = { ligado: false, workspaces: [], publicados: 0, erros: 0, pulados: 0 };
+  if (rodando) return resumo;
   rodando = true;
   try {
+    // Quem pode publicar nesta rodada: todos (env on) ou só os workspaces com a chave ligada
+    // no painel E donos da conta do Instagram que vai publicar (o token da Página é global).
+    const todos = publicadorLigadoEnv();
+    let filtroWorkspace: { workspaceId?: { in: string[] } } = {};
+    if (!todos) {
+      let igUserId: string;
+      try {
+        igUserId = depsTeste?.igUserId ?? facebookInstagramUserId();
+      } catch {
+        return resumo; // sem META_IG_USER_ID não há conta para publicar
+      }
+      const ligados = await prisma.workspace.findMany({
+        where: { opiPublicadorLigado: true, instagramAccounts: { some: { instagramId: igUserId } } },
+        select: { id: true },
+      });
+      resumo.workspaces = ligados.map((w) => w.id);
+      if (resumo.workspaces.length === 0) return resumo;
+      filtroWorkspace = { workspaceId: { in: resumo.workspaces } };
+    }
+    resumo.ligado = true;
+
     // Post que ficou em PUBLICANDO (worker caiu no meio) vira ERRO para o Luan conferir.
     // Não volta para APROVADO sozinho, para nunca publicar duas vezes.
     await prisma.postAgendado.updateMany({
-      where: { status: "PUBLICANDO", updatedAt: { lt: new Date(agora.getTime() - PUBLICANDO_TRAVADO_MS) } },
+      where: {
+        ...filtroWorkspace,
+        status: "PUBLICANDO",
+        updatedAt: { lt: new Date(agora.getTime() - PUBLICANDO_TRAVADO_MS) },
+      },
       data: { status: "ERRO", erro: "Publicação interrompida. Confira no Instagram antes de aprovar de novo." },
     });
 
     const pendentes = await prisma.postAgendado.findMany({
-      where: { status: "APROVADO", aprovadoEm: { not: null }, agendadoPara: { lte: agora } },
+      where: { ...filtroWorkspace, status: "APROVADO", aprovadoEm: { not: null }, agendadoPara: { lte: agora } },
       orderBy: { agendadoPara: "asc" },
       take: LIMITE_POR_RODADA,
     });
@@ -221,6 +256,11 @@ export async function rodarPublicador(
     }
 
     for (const post of pendentes) {
+      // Confere de novo, post a post, que o workspace dele está liberado nesta rodada.
+      if (!todos && !resumo.workspaces.includes(post.workspaceId)) {
+        resumo.pulados++;
+        continue;
+      }
       const trava = await prisma.postAgendado.updateMany({
         where: { id: post.id, status: "APROVADO" },
         data: { status: "PUBLICANDO", erro: null },
