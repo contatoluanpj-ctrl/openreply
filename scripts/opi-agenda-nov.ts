@@ -13,6 +13,7 @@ const ITENS = [
   { titulo: "## 09/11 — 23 PUT", video: "9ba33d8b1152fc33edbfe687.mp4", quando: "2026-11-09T21:00:00.000Z" },
   { titulo: "## 10/11 — 09 BINÁRIA", video: "6e4ddbc2c293c1fcf8884270.mp4", quando: "2026-11-10T21:00:00.000Z" },
   { titulo: "## 11/11 — 08 INGRESSO", video: "5fb8489ac90e72e8f527ca2f.mp4", quando: "2026-11-11T21:00:00.000Z" },
+  { titulo: "## 14/11 — 21 APOSTA", video: "5adbb46f92404cd23cbd2b6e.mp4", quando: "2026-11-14T21:00:00.000Z" },
 ];
 
 function legenda(md: string, titulo: string): string {
