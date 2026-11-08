@@ -300,7 +300,7 @@ export function PainelCampanhas({ accountId, versao }: { accountId: string; vers
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                   <span className="opi-num text-2xl">{taxa100(comPublica, kpis.comentarios)}</span>
-                  <span className="text-[11px] text-muted">com resposta pública</span>
+                  <span className="max-w-[5.5rem] text-center text-[10.5px] leading-tight text-muted">com resposta pública</span>
                 </div>
               </div>
               <ul className="mt-3 grid w-full gap-1.5 text-xs">

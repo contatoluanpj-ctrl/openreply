@@ -12,7 +12,7 @@
 
 .tree {
   --linha: rgba(17, 18, 23, .2);
-  --col: 188px;
+  --col: 212px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -84,7 +84,7 @@
 .avatarEquipe { width: 28px; height: 28px; font-size: 10px; background: rgba(17, 18, 23, .07); color: #111217; border: 1px solid rgba(17, 18, 23, .08); }
 
 .texto { min-width: 0; flex: 1; }
-.nome { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12.5px; font-weight: 700; line-height: 1.25; padding-right: 8px; overflow-wrap: break-word; }
+.nome { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 12.5px; font-weight: 700; line-height: 1.25; padding-right: 8px; overflow-wrap: break-word; }
 .papel { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 1px; font-size: 11px; line-height: 1.3; color: rgba(17, 18, 23, .55); }
 .trabalhando { display: inline-block; margin-top: 3px; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #D9541E; }
 

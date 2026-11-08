@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import AccountSelect, { type AccountOption } from "@/components/account-select";
 import { readCache, writeCache } from "@/lib/client-cache";
 import { PainelCampanhas, PillEstado } from "@/components/opi/campanhas/painel-campanhas";
+import { PageHeader } from "@/components/opi";
 
 interface Campaign {
   id: string;
@@ -289,11 +290,16 @@ export default function CampaignsPage() {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title="Campanhas"
+        description="Comentário com palavra-chave vira DM. Veja o que converte, o que está segurado e qual campanha pede ajuste."
+      />
+
       {/* Gráficos de decisão (OPI): KPIs, DMs por dia, resposta pública vs DM, desempenho e comparativo. */}
       <PainelCampanhas accountId={selectedAccountId} versao={versaoStats} />
 
       <div className="pt-4">
-        <h2 className="font-display text-[22px] font-extrabold tracking-tight">Campanhas</h2>
+        <h2 className="font-display text-[22px] font-extrabold tracking-tight">Suas campanhas</h2>
         <p className="mt-1 text-[13px] text-muted">Clique numa campanha para editar. O botão liga e pausa; o menu ⋯ duplica ou apaga.</p>
       </div>
 

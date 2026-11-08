@@ -20,7 +20,7 @@ export function RedeCard({ rede }: { rede: RedeView }) {
       <header className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-border bg-white/70 text-foreground">
-            <RedeIcone rede={rede.id} className={`h-6 w-6 ${apagado ? "opacity-60 grayscale" : ""}`} />
+            <RedeIcone rede={rede.id} className={`h-6 w-6 ${apagado ? "opacity-75" : ""}`} />
           </span>
           <div className="min-w-0">
             <h2 className="truncate font-display text-base font-bold text-foreground">{rede.nome}</h2>
