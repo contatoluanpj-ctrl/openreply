@@ -28,6 +28,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Visão geral",
     items: [
       { label: "Dashboard", href: "/dashboard", exact: true },
+      { label: "Chat central", href: "/dashboard/chat" },
     ],
   },
   {
