@@ -37,6 +37,8 @@ const ITENS = [
   { titulo: "## 27/11 — 14 DESAFIO", video: "f4846d1439fd177d3c0c3da9.mp4", quando: "2026-11-27T21:00:00.000Z" },
   { titulo: "## 01/12 — 15 QUEDA", video: "6e0d5407b03e7178c00913c2.mp4", quando: "2026-12-01T21:00:00.000Z" },
   { titulo: "## 02/12 — 28 ONDE", video: "759810f5e54aa029b8382b32.mp4", quando: "2026-12-02T21:00:00.000Z" },
+  // 03/12 (25 DIARIO) fica vazio: legenda não bate com a fala; volta para o Luan.
+  { titulo: "## 05/12 — 29 COMECAR", video: "6de4ec479ca23b8a0ad8f8f6.mp4", quando: "2026-12-05T21:00:00.000Z" },
 ];
 
 function legenda(md: string, titulo: string): string {
