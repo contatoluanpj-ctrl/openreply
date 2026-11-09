@@ -4,6 +4,7 @@ const { mockPrisma } = vi.hoisted(() => ({
   mockPrisma: {
     postAgendado: { findMany: vi.fn(), updateMany: vi.fn(), update: vi.fn() },
     workspace: { findMany: vi.fn() },
+    automation: { updateMany: vi.fn() },
   },
 }));
 
@@ -152,6 +153,7 @@ describe("rodarPublicador", () => {
     process.env.OPI_PUBLICADOR = "on";
     mockPrisma.postAgendado.updateMany.mockResolvedValue({ count: 1 });
     mockPrisma.postAgendado.update.mockResolvedValue({});
+    mockPrisma.automation.updateMany.mockResolvedValue({ count: 0 });
   });
   afterEach(() => {
     delete process.env.OPI_PUBLICADOR;
@@ -310,5 +312,24 @@ describe("chave da publicação automática no painel (Workspace.opiPublicadorLi
     const r = await rodarPublicador(agora);
     expect(r.ligado).toBe(false);
     expect(mockPrisma.workspace.findMany).not.toHaveBeenCalled();
+  });
+
+  it("reel: prende a campanha com alvo neste post e as sem alvo, nunca a de outro post", async () => {
+    mockPrisma.postAgendado.findMany.mockResolvedValue([{ ...aprovado, id: "p7", tipo: "REEL", midias: ["https://a/v.mp4"] }]);
+    const g = graphFalso([{ id: "reel" }, { status_code: "FINISHED" }, { id: "m7" }, { permalink: "https://instagram.com/reel/7" }]);
+    await rodarPublicador(agora, { fetch: g.fn, token: TOKEN, igUserId: "IG1", versao: "v25.0", esperar: async () => {} });
+    const data = { postId: "m7", postUrl: "https://instagram.com/reel/7", pendingNextReel: false };
+    expect(mockPrisma.automation.updateMany).toHaveBeenCalledWith({
+      where: { workspaceId: "w1", pendingNextReel: true, postUrl: "agendado:p7" },
+      data,
+    });
+    expect(mockPrisma.automation.updateMany).toHaveBeenCalledWith({
+      where: {
+        workspaceId: "w1",
+        pendingNextReel: true,
+        OR: [{ postUrl: null }, { NOT: { postUrl: { startsWith: "agendado:" } } }],
+      },
+      data,
+    });
   });
 });

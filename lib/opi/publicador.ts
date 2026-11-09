@@ -3,6 +3,7 @@ import { getMetaGraphApiVersion } from "@/lib/env";
 import { resolvePageAccessToken } from "@/lib/meta/facebook-login";
 import { facebookInstagramUserId, facebookPageAccessToken } from "@/lib/meta/login-mode";
 import { temAviso } from "@/lib/opi/aviso";
+import { PREFIXO_ALVO, filtroSemAlvo } from "@/lib/opi/campanha-alvo";
 
 /**
  * Publicador do calendário do OPI Central.
@@ -180,12 +181,21 @@ const LIMITE_POR_RODADA = 5;
  * sem esperar a busca de 5 min do worker: comentário dos primeiros minutos já casa com a campanha.
  * Falha aqui não desfaz a publicação (o worker prende de novo na próxima busca).
  */
-async function prenderCampanhasAoReel(post: { workspaceId?: string }, r: ResultadoPublicacao): Promise<void> {
+async function prenderCampanhasAoReel(post: { id?: string; workspaceId?: string }, r: ResultadoPublicacao): Promise<void> {
   if (!post.workspaceId) return;
+  const data = { postId: r.mediaId, postUrl: r.permalink, pendingNextReel: false };
   try {
+    // Campanha com alvo neste post agendado ("agendado:<id>").
+    if (post.id) {
+      await prisma.automation.updateMany({
+        where: { workspaceId: post.workspaceId, pendingNextReel: true, postUrl: PREFIXO_ALVO + post.id },
+        data,
+      });
+    }
+    // Campanha "próximo Reel" sem alvo.
     await prisma.automation.updateMany({
-      where: { workspaceId: post.workspaceId, pendingNextReel: true },
-      data: { postId: r.mediaId, postUrl: r.permalink, pendingNextReel: false },
+      where: { workspaceId: post.workspaceId, pendingNextReel: true, ...filtroSemAlvo },
+      data,
     });
   } catch (e) {
     console.error("[OPI Publicador] Reel publicado, mas a campanha não foi presa agora", e instanceof Error ? e.message : e);

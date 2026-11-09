@@ -5,6 +5,7 @@ import {
   getUserMedia,
   type InstagramMedia,
 } from "@/lib/instagram/provider";
+import { PREFIXO_ALVO, alvoAgendado, filtroSemAlvo } from "@/lib/opi/campanha-alvo";
 
 function isReel(media: InstagramMedia): boolean {
   return media.media_product_type === "REELS";
@@ -22,8 +23,30 @@ export type AttachNextReelResult = {
  * run the same check on every comment-poll interval.
  */
 export async function attachPendingNextReels(): Promise<AttachNextReelResult> {
+  // OPI: campanha com alvo ("agendado:<id>") só é presa ao Reel desse post agendado,
+  // depois que ele sair (rede de segurança se o publicador não conseguiu prender na hora).
+  const comAlvo = await prisma.automation.findMany({
+    where: { pendingNextReel: true, postUrl: { startsWith: PREFIXO_ALVO } },
+    select: { id: true, postUrl: true },
+  });
+  let boundAlvo = 0;
+  for (const a of comAlvo) {
+    const alvo = alvoAgendado(a.postUrl);
+    if (!alvo) continue;
+    const post = await prisma.postAgendado.findUnique({
+      where: { id: alvo },
+      select: { status: true, mediaId: true, permalink: true },
+    });
+    if (post?.status !== "PUBLICADO" || !post.mediaId) continue;
+    await prisma.automation.update({
+      where: { id: a.id },
+      data: { postId: post.mediaId, postUrl: post.permalink ?? null, pendingNextReel: false },
+    });
+    boundAlvo += 1;
+  }
+
   const pending = await prisma.automation.findMany({
-    where: { pendingNextReel: true },
+    where: { pendingNextReel: true, ...filtroSemAlvo },
     include: { instagramAccount: true },
   });
 
@@ -46,8 +69,8 @@ export async function attachPendingNextReels(): Promise<AttachNextReelResult> {
       });
   }
 
-  let checked = 0;
-  let bound = 0;
+  let checked = comAlvo.length;
+  let bound = boundAlvo;
   const failures: string[] = [];
 
   for (const { account, automations } of byAccount.values()) {
