@@ -40,6 +40,7 @@ const ITENS = [
   // 03/12 (25 DIARIO) fica vazio: legenda não bate com a fala; volta para o Luan.
   { titulo: "## 05/12 — 29 COMECAR", video: "6de4ec479ca23b8a0ad8f8f6.mp4", quando: "2026-12-05T21:00:00.000Z" },
   { titulo: "## 06/12 — 02 ESTRATEGIAS", video: "b63a9fff7231b95e44c51cf3.mp4", quando: "2026-12-06T21:00:00.000Z" },
+  { titulo: "## 04/12 — 10 TITULAR", video: "e6b99c162cb921fa09a62768.mp4", quando: "2026-12-04T21:00:00.000Z" },
 ];
 
 function legenda(md: string, titulo: string): string {
