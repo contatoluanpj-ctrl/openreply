@@ -17,6 +17,9 @@ const ITENS = [
   { titulo: "## 13/11 — 13 CHECKLIST", video: "c79f4266603c62e4827538bd.mp4", quando: "2026-11-13T21:00:00.000Z" },
   { titulo: "## 14/11 — 21 APOSTA", video: "5adbb46f92404cd23cbd2b6e.mp4", quando: "2026-11-14T21:00:00.000Z" },
   { titulo: "## 15/11 — 19 VENCIMENTO", video: "24f50803278f136675be2548.mp4", quando: "2026-11-15T21:00:00.000Z" },
+  // 26 e 27: "Aprovo os dois" + "Sim, agenda" do Luan na sessão FOUNDER OPI (08/11).
+  { titulo: "## 16/11 — 26 RISCO", video: "90c52420916cdc3e09fec205.mp4", quando: "2026-11-16T21:00:00.000Z" },
+  { titulo: "## 17/11 — 27 LIVROSOPCOES", video: "75696916d1d509c416e20742.mp4", quando: "2026-11-17T21:00:00.000Z" },
 ];
 
 function legenda(md: string, titulo: string): string {
