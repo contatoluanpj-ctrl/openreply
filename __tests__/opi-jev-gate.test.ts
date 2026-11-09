@@ -272,7 +272,7 @@ describe("interruptores", () => {
     expect(gateLigado({ OPI_JEV_GATE: "on" })).toBe(true);
     expect(gateLigado({ OPI_JEV_GATE: "off" })).toBe(false);
     expect(gateLigado({ OPI_JEV_GATE: "OFF" })).toBe(false);
-    expect(pausaPrimeiraDmLigada({})).toBe(true);
+    expect(pausaPrimeiraDmLigada({})).toBe(false); // desligada por padrão desde 08/11/2026
     expect(pausaPrimeiraDmLigada({ OPI_PAUSE_AFTER_FIRST_DM: "true" })).toBe(true);
     expect(pausaPrimeiraDmLigada({ OPI_PAUSE_AFTER_FIRST_DM: "false" })).toBe(false);
     expect(pausaPrimeiraDmLigada({ OPI_JEV_GATE: "off" })).toBe(false);

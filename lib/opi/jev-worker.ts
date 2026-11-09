@@ -14,6 +14,7 @@ import {
   mensagemTelegram,
   motivoCampanhaNaoConforme,
   pausaPrimeiraDmLigada,
+  telegramComentariosLigado,
   reservarPrimeiraDm,
   respostasPublicasPermitidas,
   type CampanhaConfig,
@@ -115,7 +116,7 @@ async function registrar(message: string, level: "INFO" | "WARNING", r: Registro
  * Entregue = resolvedAt. Roda no ciclo do reconciliador (worker/dm-worker.ts). Com o portão desligado, não faz nada.
  */
 export async function reenviarAvisosPendentes(): Promise<{ reenviados: number; pendentes: number }> {
-  if (!gateLigado() || !process.env.OPI_TELEGRAM_BOT_TOKEN || !process.env.OPI_TELEGRAM_CHAT_ID) return { reenviados: 0, pendentes: 0 };
+  if (!gateLigado() || !telegramComentariosLigado() || !process.env.OPI_TELEGRAM_BOT_TOKEN || !process.env.OPI_TELEGRAM_CHAT_ID) return { reenviados: 0, pendentes: 0 };
   const pendentes = await prisma.operationalEvent.findMany({
     where: {
       // Só os que falharam. Os suprimidos pelo teto ficam em Logs (reenviá-los anularia o teto).
@@ -142,6 +143,11 @@ export async function reenviarAvisosPendentes(): Promise<{ reenviados: number; p
 }
 
 async function avisar(texto: string, r: Registro, opts: { comum?: boolean } = {}) {
+  if (!telegramComentariosLigado()) {
+    // Telegram de comentário desligado: fica só o registro em Logs (OperationalEvent), sem notificação.
+    await registrar(EVENTO_AVISO_SUPRIMIDO, "INFO", r, texto);
+    return;
+  }
   const agora = Date.now();
   const chave = r.commentId ? `${r.tipo}:${r.commentId}` : null;
   if (chave) {

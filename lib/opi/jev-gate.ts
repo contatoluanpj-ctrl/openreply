@@ -73,13 +73,19 @@ export function gateLigado(env: Env = process.env): boolean {
   const v = String(env.OPI_JEV_GATE ?? "").trim().toLowerCase();
   return !["off", "false", "0", "nao", "não", "desligado"].includes(v);
 }
-// Ligada por padrão quando o portão está ligado: só "false" explícito desliga (variável esquecida no deploy
-// não pode sumir com a conferência da Compliance, PARECER §8.2-4).
+// DESLIGADA por padrão desde 08/11/2026 (pedido do Luan: a campanha não pode parar de responder sozinha).
+// Os textos de DM entram pela tabela TextoAprovado, já conferidos pela Compliance antes de ativar.
+// Para voltar a pausar na 1ª DM de cada texto: OPI_PAUSE_AFTER_FIRST_DM=true.
 export function pausaPrimeiraDmLigada(env: Env = process.env): boolean {
   const v = String(env.OPI_PAUSE_AFTER_FIRST_DM ?? "").trim().toLowerCase();
-  if (v === "true") return true;
-  if (v === "false") return false;
-  return gateLigado(env);
+  return v === "true" && gateLigado(env);
+}
+
+// Avisos de comentário no Telegram (comentário segurado, sem campanha, 1ª DM): DESLIGADOS por padrão desde
+// 08/11/2026 (pedido do Luan: muitos comentários = muitas notificações). O registro continua em Logs no painel.
+// Para ligar de novo: OPI_TELEGRAM_COMENTARIOS=true.
+export function telegramComentariosLigado(env: Env = process.env): boolean {
+  return String(env.OPI_TELEGRAM_COMENTARIOS ?? "").trim().toLowerCase() === "true";
 }
 
 // ---- Casamento ----

@@ -108,6 +108,7 @@ beforeEach(() => {
   process.env.OPI_TELEGRAM_BOT_TOKEN = "tok";
   process.env.OPI_TELEGRAM_CHAT_ID = "123";
   process.env.OPI_PAUSE_AFTER_FIRST_DM = "false";
+  process.env.OPI_TELEGRAM_COMENTARIOS = "true"; // os testes de aviso abaixo cobrem o Telegram LIGADO
   zerarAvisosParaTeste();
   process.env.OPI_TELEGRAM_INTERVALO_MS = "0";
   mockPrisma.operationalEvent.create.mockResolvedValue({});
@@ -345,11 +346,22 @@ describe("pausa da 1ª DM (OPI_PAUSE_AFTER_FIRST_DM=true)", () => {
     expect(mockPrisma.dmLog.upsert.mock.calls.some(([x]) => x.update?.jevDecision === "enviar")).toBe(true);
   });
 
-  it("pausa ligada por padrão com o portão ligado (variável ausente)", async () => {
+  it("pausa DESLIGADA por padrão (variável ausente): a 1ª DM sai e a campanha segue ativa", async () => {
     delete process.env.OPI_PAUSE_AFTER_FIRST_DM;
     respondeJev(jevOk());
     await processor()(commentJob("JUROS"));
-    expect(mockPrisma.automation.updateMany).toHaveBeenCalledWith({ where: { id: "auto_1", isActive: true }, data: { isActive: false } });
+    expect(mockPrisma.automation.updateMany).not.toHaveBeenCalled();
+    expect(send.sendPrivateReply).toHaveBeenCalledTimes(1);
+  });
+
+  it("Telegram de comentário DESLIGADO por padrão: nada vai ao Telegram, fica só o registro", async () => {
+    delete process.env.OPI_TELEGRAM_COMENTARIOS;
+    process.env.OPI_PAUSE_AFTER_FIRST_DM = "true";
+    respondeJev(jevOk());
+    await processor()(commentJob("JUROS"));
+    expect(send.sendPrivateReply).toHaveBeenCalledTimes(1);
+    expect(chamadasTelegram()).toHaveLength(0);
+    expect(mockPrisma.operationalEvent.create).toHaveBeenCalled();
   });
 
   it("a pausa conta só envios do MESMO texto (1ª DM de cada fase)", async () => {
