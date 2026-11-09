@@ -20,6 +20,10 @@ const ITENS = [
   // 26 e 27: "Aprovo os dois" + "Sim, agenda" do Luan na sessão FOUNDER OPI (08/11).
   { titulo: "## 16/11 — 26 RISCO", video: "90c52420916cdc3e09fec205.mp4", quando: "2026-11-16T21:00:00.000Z" },
   { titulo: "## 17/11 — 27 LIVROSOPCOES", video: "75696916d1d509c416e20742.mp4", quando: "2026-11-17T21:00:00.000Z" },
+  // Lote final (18/11 a 07/12): autorização do Luan na FOUNDER OPI ("já manda direto pra outra sessão, pra ela deixar
+  // agendada") e nesta sessão ("ele vai mandar os vídeos para você já aprovados e deixar agendado tudo"), 08/11.
+  { titulo: "## 18/11 — 03 ERROS", video: "00d3c1a0078dc6c16481ab92.mp4", quando: "2026-11-18T21:00:00.000Z" },
+  { titulo: "## 19/11 — 06 LIVROS", video: "344b67384569a75629487891.mp4", quando: "2026-11-19T21:00:00.000Z" },
 ];
 
 function legenda(md: string, titulo: string): string {
