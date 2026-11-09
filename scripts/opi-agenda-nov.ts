@@ -29,6 +29,7 @@ const ITENS = [
   { titulo: "## 23/11 — 17 LIQUIDEZ", video: "9b2f779314665436889564ca.mp4", quando: "2026-11-23T21:00:00.000Z" },
   { titulo: "## 21/11 — 11 PREMIO", video: "37bdb9d63d911e4beb376054.mp4", quando: "2026-11-21T21:00:00.000Z" },
   { titulo: "## 24/11 — 22 CALL", video: "828dec0823a2cd8671c72d76.mp4", quando: "2026-11-24T21:00:00.000Z" },
+  { titulo: "## 25/11 — 18 TEMPO", video: "65ce495bc9362f7a605f2f84.mp4", quando: "2026-11-25T21:00:00.000Z" },
 ];
 
 function legenda(md: string, titulo: string): string {
