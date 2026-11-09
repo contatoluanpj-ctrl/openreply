@@ -34,6 +34,9 @@ const ITENS = [
   { titulo: "## 29/11 — 24 PROMPT", video: "0e655ce7806698242bad0e56.mp4", quando: "2026-11-29T21:00:00.000Z" },
   { titulo: "## 28/11 — 16 VOL", video: "7b7f0da0e5d1b94f6e44c961.mp4", quando: "2026-11-28T21:00:00.000Z" },
   { titulo: "## 30/11 — 20 DINHEIRO", video: "2c87ab61ac5196d86d59d360.mp4", quando: "2026-11-30T21:00:00.000Z" },
+  { titulo: "## 27/11 — 14 DESAFIO", video: "f4846d1439fd177d3c0c3da9.mp4", quando: "2026-11-27T21:00:00.000Z" },
+  { titulo: "## 01/12 — 15 QUEDA", video: "6e0d5407b03e7178c00913c2.mp4", quando: "2026-12-01T21:00:00.000Z" },
+  { titulo: "## 02/12 — 28 ONDE", video: "759810f5e54aa029b8382b32.mp4", quando: "2026-12-02T21:00:00.000Z" },
 ];
 
 function legenda(md: string, titulo: string): string {
