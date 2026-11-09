@@ -9,7 +9,8 @@ const CAL = "C:/Users/luans/OneDrive/Área de Trabalho/OPI/company-os/04-growth/
 const AVISO = "Conteúdo educativo. Não é recomendação individual de investimento.";
 const BASE = "https://opi-openreply.vercel.app/m/";
 
-const ITENS = [
+// SO=<trecho do título> agenda só os itens que batem (ex.: SO="25 DIARIO").
+const ITENS: { titulo: string; video: string; quando: string; por?: string }[] = [
   { titulo: "## 09/11 — 23 PUT", video: "9ba33d8b1152fc33edbfe687.mp4", quando: "2026-11-09T21:00:00.000Z" },
   { titulo: "## 10/11 — 09 BINÁRIA", video: "6e4ddbc2c293c1fcf8884270.mp4", quando: "2026-11-10T21:00:00.000Z" },
   { titulo: "## 11/11 — 08 INGRESSO", video: "5fb8489ac90e72e8f527ca2f.mp4", quando: "2026-11-11T21:00:00.000Z" },
@@ -37,7 +38,10 @@ const ITENS = [
   { titulo: "## 27/11 — 14 DESAFIO", video: "f4846d1439fd177d3c0c3da9.mp4", quando: "2026-11-27T21:00:00.000Z" },
   { titulo: "## 01/12 — 15 QUEDA", video: "6e0d5407b03e7178c00913c2.mp4", quando: "2026-12-01T21:00:00.000Z" },
   { titulo: "## 02/12 — 28 ONDE", video: "759810f5e54aa029b8382b32.mp4", quando: "2026-12-02T21:00:00.000Z" },
-  // 03/12 (25 DIARIO) fica vazio: legenda não bate com a fala; volta para o Luan.
+  // 03/12 (25 DIARIO): legenda NOVA (Compliance 09/11) e a fala "encerre no exato momento que perceber" liberadas
+  // pelo Luan na FOUNDER OPI ("Sim, agenda", 09/11).
+  { titulo: "## 03/12 — 25 DIARIO", video: "fd09db54d7135535b970d613.mp4", quando: "2026-12-03T21:00:00.000Z",
+    por: 'Luan (FOUNDER OPI, "Sim, agenda", legenda nova e fala liberadas, 09/11/2026)' },
   { titulo: "## 05/12 — 29 COMECAR", video: "6de4ec479ca23b8a0ad8f8f6.mp4", quando: "2026-12-05T21:00:00.000Z" },
   { titulo: "## 06/12 — 02 ESTRATEGIAS", video: "b63a9fff7231b95e44c51cf3.mp4", quando: "2026-12-06T21:00:00.000Z" },
   { titulo: "## 04/12 — 10 TITULAR", video: "e6b99c162cb921fa09a62768.mp4", quando: "2026-12-04T21:00:00.000Z" },
@@ -59,7 +63,7 @@ async function main() {
   if (!md.includes('APROVADO pelo Luan em 08/11/2026 ("Sim, aprovo")')) throw new Error("calendário sem a marca de aprovação");
   const conta = await prisma.instagramAccount.findFirstOrThrow({ where: { username: "opcoesparainvestidores" } });
   const ws = conta.workspaceId;
-  for (const it of ITENS) {
+  for (const it of ITENS.filter((x) => !process.env.SO || x.titulo.includes(process.env.SO))) {
     const res = await fetch(BASE + it.video, { method: "HEAD" });
     if (res.status !== 200 || !String(res.headers.get("content-type")).includes("video/mp4")) {
       throw new Error(`vídeo ainda não está público: ${it.video} (${res.status})`);
@@ -68,7 +72,7 @@ async function main() {
     const dados = {
       workspaceId: ws, tipo: "REEL" as const, midias: [BASE + it.video], legenda: leg,
       agendadoPara: new Date(it.quando), status: "APROVADO" as const, aprovadoEm: new Date(),
-      aprovadoPor: 'Luan (calendário "Sim, aprovo" + "Sim, agenda", 08/11/2026)',
+      aprovadoPor: it.por ?? 'Luan (calendário "Sim, aprovo" + "Sim, agenda", 08/11/2026)',
     };
     const existente = await prisma.postAgendado.findFirst({ where: { workspaceId: ws, legenda: leg } });
     const p = existente
