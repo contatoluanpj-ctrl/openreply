@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
           },
         },
       })
-      .catch(() => {});
+      .catch((e) => console.error("[webhook] não gravou o evento de assinatura inválida", e));
     return NextResponse.json(
       { success: false, error: "Invalid signature" },
       { status: 401 }

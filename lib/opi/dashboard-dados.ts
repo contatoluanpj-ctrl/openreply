@@ -104,6 +104,8 @@ export type LogDm = {
   status: string;
   matchedKeyword: string | null;
   campanha: string;
+  /** false quando a campanha do log está desativada (ex.: campanha de teste). Ausente = conta. */
+  campanhaAtiva?: boolean;
 };
 
 /** Comentários que bateram com uma campanha: tudo menos SKIPPED_NO_MATCH (comentário sem palavra). */
@@ -138,6 +140,11 @@ export function taxaConversao(logs: Pick<LogDm, "status">[]): Conversao {
   const enviadas = doCampanha.filter((l) => l.status === "SENT").length;
   const comentarios = doCampanha.length;
   return { comentarios, enviadas, taxa: comentarios > 0 ? Math.round((enviadas / comentarios) * 1000) / 10 : null };
+}
+
+/** Os destaques (palavras e horário) ignoram campanhas desativadas, para o teste não virar conselho. */
+export function soAtivas<T extends Pick<LogDm, "campanhaAtiva">>(logs: T[]): T[] {
+  return logs.filter((l) => l.campanhaAtiva !== false);
 }
 
 export type PalavraConversao = { palavra: string; comentarios: number; enviadas: number; taxa: number | null };
@@ -463,7 +470,7 @@ export async function carregarDashboard(db: DbDashboard, workspaceId: string, ag
     bloco(async () => {
       const linhas = await db.dmLog.findMany({
         where: { workspaceId, createdAt: { gte: inicio90 } },
-        select: { createdAt: true, dmSentAt: true, status: true, matchedKeyword: true, automation: { select: { name: true } } },
+        select: { createdAt: true, dmSentAt: true, status: true, matchedKeyword: true, automation: { select: { name: true, isActive: true } } },
         take: 50000,
       });
       return linhas.map(
@@ -473,6 +480,7 @@ export async function carregarDashboard(db: DbDashboard, workspaceId: string, ag
           status: String(l.status),
           matchedKeyword: l.matchedKeyword,
           campanha: l.automation?.name ?? "",
+          campanhaAtiva: l.automation?.isActive ?? true,
         }),
       );
     }),
@@ -551,8 +559,8 @@ export async function carregarDashboard(db: DbDashboard, workspaceId: string, ag
       ? { ok: false, motivo: pontosIg.motivo }
       : { ok: true, dados: porPeriodo((n) => (serie90 ?? []).slice(90 - n)) },
     dms: logs.ok ? { ok: true, dados: porPeriodo((n) => dmsPorDia(logs.dados, dias[n])) } : logs,
-    palavras: logs.ok ? { ok: true, dados: porPeriodo((n) => conversaoPorPalavra(logsDesde(logs.dados, inicioJanela(agora, n)))) } : logs,
+    palavras: logs.ok ? { ok: true, dados: porPeriodo((n) => conversaoPorPalavra(logsDesde(soAtivas(logs.dados), inicioJanela(agora, n)))) } : logs,
     audiencia: seguidoresKpi.ok ? { ok: true, dados: distribuicaoAudiencia(tot.redes) } : { ok: false, motivo: seguidoresKpi.motivo },
-    horario: logs.ok ? { ok: true, dados: porPeriodo((n) => horarioComentarios(logsDesde(logs.dados, inicioJanela(agora, n)))) } : logs,
+    horario: logs.ok ? { ok: true, dados: porPeriodo((n) => horarioComentarios(logsDesde(soAtivas(logs.dados), inicioJanela(agora, n)))) } : logs,
   };
 }

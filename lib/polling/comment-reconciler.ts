@@ -364,5 +364,5 @@ async function recordSweep(
         payload: { ...stat },
       },
     })
-    .catch(() => {});
+    .catch((e) => console.error("[reconciler] não gravou o resumo da varredura", e));
 }

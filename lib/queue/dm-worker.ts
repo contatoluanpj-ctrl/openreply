@@ -530,7 +530,7 @@ async function processComment(job: Job<ProcessCommentJob>): Promise<void> {
             },
             data: { publicReplyError: formatError(classifySendError(error)), publicReplyDeliveryUnconfirmed: !isConfirmedSendRejection(error) },
           })
-          .catch(() => {});
+          .catch((e) => console.error("[dm-worker] não gravou o erro da resposta pública no DmLog", commentId, e));
       }
     }
     };
@@ -1116,7 +1116,7 @@ async function processPostback(job: Job<ProcessPostbackJob>): Promise<void> {
               },
             },
           })
-          .catch(() => {});
+          .catch((e) => console.error("[dm-worker] não gravou o evento do portão de seguidor", e));
       }
 
       const promptText = renderMessageWithoutLink({

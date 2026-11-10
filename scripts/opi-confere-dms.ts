@@ -12,6 +12,6 @@ async function main() {
   const posts = await db.postAgendado.findMany({
     where: { workspaceId: ws, OR: [{ legenda: { contains: "Acertar a direção" } }, { legenda: { contains: "trava de alta e straddle" } }, { legenda: { contains: "venda coberta é um fluxo" } }] },
   });
-  for (const p of posts) console.log(`\n[POST ${p.id}] ${JSON.stringify({ status: (p as any).status, quando: (p as any).agendadoPara ?? (p as any).dataHora })}\n${p.legenda.slice(0, 80)}...`);
+  for (const p of posts) console.log(`\n[POST ${p.id}] ${p.status + " " + p.agendadoPara.toISOString()}\n${p.legenda.slice(0, 80)}...`);
 }
 main().finally(() => db.$disconnect());

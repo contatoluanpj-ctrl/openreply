@@ -185,3 +185,11 @@ describe("pendências", () => {
     expect(areaDaPendencia("/qualquer")).toBe("Geral");
   });
 });
+
+describe("soAtivas", () => {
+  it("tira dos destaques os logs de campanha desativada e mantém os sem marca", async () => {
+    const { soAtivas } = await import("../lib/opi/dashboard-dados");
+    const logs = [{ campanhaAtiva: true }, { campanhaAtiva: false }, {}];
+    expect(soAtivas(logs)).toEqual([{ campanhaAtiva: true }, {}]);
+  });
+});
