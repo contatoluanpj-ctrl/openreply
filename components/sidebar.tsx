@@ -49,9 +49,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Operações",
     items: [
-      { label: "Automações", href: "/automations" },
       { label: "Diagnóstico", href: "/diagnostics" },
-      { label: "API e MCP", href: "/integrations" },
       { label: "Seguidores", href: "/overview" },
       { label: "Configurações", href: "/settings" },
     ],

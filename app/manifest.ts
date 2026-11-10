@@ -6,10 +6,10 @@ import type { MetadataRoute } from "next";
 // a phone practical.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "OpenReply",
-    short_name: "OpenReply",
-    description: "Instagram comment-to-DM automation",
-    start_url: "/overview",
+    name: "OPI Central",
+    short_name: "OPI Central",
+    description: "Painel interno da OPI",
+    start_url: "/dashboard",
     display: "standalone",
     orientation: "portrait",
     background_color: "#18181b",

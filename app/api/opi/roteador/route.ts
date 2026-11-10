@@ -111,7 +111,8 @@ export async function POST(request: Request) {
           where: { id: ledgerId, workspaceId: ctx.workspaceId, automationId: LEDGER_AUTOMACAO },
           data: { finalLuan: manteve, resultadoReal: unicos.join("+") },
         })
-        .catch(() => undefined);
+        // O pedido já foi criado; falha no ledger não derruba a resposta, mas fica no log.
+        .catch((erro) => console.error("[opi.roteador] escolha final não gravada no JevLedger", ledgerId, erro));
     }
     return Response.json({ data: criados }, { status: 201, headers: noStore });
   } catch (error) { return apiError(error); }

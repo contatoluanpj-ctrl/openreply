@@ -33,9 +33,9 @@ describe("language preference", () => {
     expect(t("Settings")).toBe("Настройки");
   });
 
-  it("falls back to English for an invalid cookie", async () => {
+  it("falls back to Portuguese (OPI default) for an invalid cookie", async () => {
     store.get.mockReturnValue({ value: "unsupported" });
-    expect((await getI18n()).locale).toBe("en");
+    expect((await getI18n()).locale).toBe("pt-BR");
   });
 
   it("persists only the language cookie, across routes and browser restarts", async () => {

@@ -21,7 +21,8 @@ export function isLocale(value: unknown): value is Locale {
 }
 
 export function resolveLocale(value: unknown): Locale {
-  return isLocale(value) ? value : "en";
+  // OPI: o painel é usado em português; sem cookie de idioma, vale pt-BR.
+  return isLocale(value) ? value : "pt-BR";
 }
 
 type Placeholders<S extends string> =
