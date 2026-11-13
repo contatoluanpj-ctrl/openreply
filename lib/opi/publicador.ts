@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/client";
 import { getMetaGraphApiVersion } from "@/lib/env";
 import { resolvePageAccessToken } from "@/lib/meta/facebook-login";
 import { facebookInstagramUserId, facebookPageAccessToken } from "@/lib/meta/login-mode";
+import { alertarFalha } from "@/lib/opi/alertas";
 import { temAviso } from "@/lib/opi/aviso";
 import { PREFIXO_ALVO, filtroSemAlvo } from "@/lib/opi/campanha-alvo";
 
@@ -202,6 +203,20 @@ async function prenderCampanhasAoReel(post: { id?: string; workspaceId?: string 
   }
 }
 const PUBLICANDO_TRAVADO_MS = 30 * 60_000;
+const LINK_CALENDARIO = "/dashboard/calendario";
+
+const fmtHoraPost = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+function rotuloPost(post: { tipo: string; agendadoPara?: Date | null }): string {
+  const tipo = post.tipo === "REEL" ? "Reel" : post.tipo === "CARROSSEL" ? "Carrossel" : "Post";
+  return post.agendadoPara instanceof Date ? `${tipo} de ${fmtHoraPost.format(post.agendadoPara)}` : tipo;
+}
 
 export type ResumoRodada = {
   ligado: boolean;
@@ -250,7 +265,7 @@ export async function rodarPublicador(
 
     // Post que ficou em PUBLICANDO (worker caiu no meio) vira ERRO para o Luan conferir.
     // Não volta para APROVADO sozinho, para nunca publicar duas vezes.
-    await prisma.postAgendado.updateMany({
+    const travados = await prisma.postAgendado.updateMany({
       where: {
         ...filtroWorkspace,
         status: "PUBLICANDO",
@@ -258,6 +273,14 @@ export async function rodarPublicador(
       },
       data: { status: "ERRO", erro: "Publicação interrompida. Confira no Instagram antes de aprovar de novo." },
     });
+    if ((travados?.count ?? 0) > 0) {
+      await alertarFalha(
+        "post",
+        `${travados.count} post(s) com a publicação interrompida. Confira no Instagram antes de aprovar de novo.`,
+        LINK_CALENDARIO,
+        { chave: "post:interrompido" },
+      );
+    }
 
     const pendentes = await prisma.postAgendado.findMany({
       where: { ...filtroWorkspace, status: "APROVADO", aprovadoEm: { not: null }, agendadoPara: { lte: agora } },
@@ -302,6 +325,10 @@ export async function rodarPublicador(
           data: { status: "ERRO", erro: "Legenda sem o aviso obrigatório. Nada foi publicado." },
         });
         resumo.erros++;
+        await alertarFalha("post", `${rotuloPost(post)}: legenda sem o aviso obrigatório. Nada foi publicado.`, LINK_CALENDARIO, {
+          chave: `post:${post.id}`,
+          workspaceId: post.workspaceId,
+        });
         continue;
       }
       try {
@@ -317,6 +344,10 @@ export async function rodarPublicador(
         await prisma.postAgendado.update({ where: { id: post.id }, data: { status: "ERRO", erro: msg } });
         console.error("[OPI Publicador] Falha ao publicar", post.id, msg);
         resumo.erros++;
+        await alertarFalha("post", `${rotuloPost(post)}: ${msg}`, LINK_CALENDARIO, {
+          chave: `post:${post.id}`,
+          workspaceId: post.workspaceId,
+        });
       }
     }
     return resumo;

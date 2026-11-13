@@ -5,6 +5,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Badge, PageHeader } from "@/components/opi";
 import { Kpi, Pendencias } from "@/components/opi/dashboard/blocos";
+import { BlocoHoje } from "@/components/opi/dashboard/hoje";
 import { brl, numero, pct } from "@/components/opi/dashboard/formato";
 import {
   GraficoAudiencia,
@@ -56,7 +57,7 @@ export default async function DashboardPage() {
   if (!workspaceId) redirect("/login");
 
   // Cache curto (30 s) por workspace: voltar ao Dashboard não refaz as consultas pesadas.
-  const { d, v, agora } = await carregarPainelDashboard(workspaceId);
+  const { d, v, h, agora } = await carregarPainelDashboard(workspaceId);
   const pendencias = montarPendencias(v);
   const erros = pendencias.filter((p) => p.nivel === "erro").length;
   const { seguidores, dms7d, taxa, posts, gasto } = d.kpis;
@@ -83,7 +84,9 @@ export default async function DashboardPage() {
         }
       />
 
-      <section aria-label="Resumo" className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <BlocoHoje hoje={h} />
+
+      <section aria-label="Resumo" className="mt-6 grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Kpi
           icone="users"
           rotulo="Seguidores"

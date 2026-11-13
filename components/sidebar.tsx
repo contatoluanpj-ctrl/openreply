@@ -37,6 +37,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Redes", href: "/dashboard/redes" },
       { label: "Palavras-chave", href: "/dashboard/palavras" },
       { label: "Campanhas", href: "/campaigns" },
+      { label: "Leads e funil", href: "/dashboard/leads" },
+      { label: "Conteúdo", href: "/dashboard/conteudo" },
       { label: "Caixa de entrada", href: "/inbox" },
       { label: "Registro de DMs", href: "/logs" },
       { label: "Calendário", href: "/dashboard/calendario" },

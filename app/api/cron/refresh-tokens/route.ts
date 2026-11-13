@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { decryptToken, encryptToken } from "@/lib/meta/oauth";
 import { refreshLongLivedToken } from "@/lib/meta/client";
+import { alertarFalha } from "@/lib/opi/alertas";
 
 const DAYS_BEFORE_EXPIRY = 10;
 
@@ -88,6 +89,14 @@ export async function GET(request: NextRequest) {
           },
         },
       });
+
+      // OPI: falha de renovação vira alerta no Telegram (no máximo um a cada 6 h por conta).
+      await alertarFalha(
+        "token",
+        `A renovação do token de @${account.username} falhou: ${errorMessage}. Sem renovar, DMs e publicação param quando ele vencer.`,
+        "/settings",
+        { chave: `token:${account.id}`, workspaceId: account.workspaceId },
+      );
 
       results.push({
         instagramAccountId: account.id,

@@ -7,6 +7,7 @@ import {
 import { claimCommentDelivery, MAX_COMMENT_SEND_ATTEMPTS } from "./comment-delivery";
 import { createHash } from "node:crypto";
 import { UnrecoverableError, Worker, type Job } from "bullmq";
+import { alertarFalha, falhaDefinitiva } from "@/lib/opi/alertas";
 import {
   getDMQueue,
   getRedisConnection,
@@ -1681,6 +1682,13 @@ async function recordWorkerFailure(
       instagramAccountId,
       commentId: commentId ?? undefined,
     });
+
+    // OPI: alerta no Telegram só quando não haverá outra tentativa (sem nome nem texto do comentário).
+    if (falhaDefinitiva(job, error)) {
+      await alertarFalha("dm", `DM não saiu depois de ${job?.attemptsMade ?? 1} tentativa(s): ${error.message}`, "/logs", {
+        workspaceId: account?.workspaceId ?? null,
+      });
+    }
   } catch (recordError) {
     console.error(
       "[DM Worker] Failed to record worker failure:",

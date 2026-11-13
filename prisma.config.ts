@@ -2,6 +2,7 @@
 // npm install --save-dev prisma dotenv
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
+import { urlDoPrismaCli } from "./lib/db/url-direta";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -9,6 +10,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // CLI (migrate) usa a conexão DIRETA do Neon: pelo pgbouncer a trava de migração fica presa.
+    // O cliente de runtime (lib/db/client) continua com a DATABASE_URL como está.
+    url: urlDoPrismaCli(process.env),
   },
 });

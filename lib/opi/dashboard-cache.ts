@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db/client";
 import { carregarDashboard, type Dashboard } from "@/lib/opi/dashboard-dados";
+import { carregarHoje, type Hoje } from "@/lib/opi/hoje";
 import { carregarVisaoGeral, type VisaoGeral } from "@/lib/opi/visao-geral";
 
 /**
@@ -10,7 +11,7 @@ import { carregarVisaoGeral, type VisaoGeral } from "@/lib/opi/visao-geral";
  */
 export const DASHBOARD_CACHE_SEGUNDOS = 30;
 
-type Painel = { d: Dashboard; v: VisaoGeral; agora: Date };
+type Painel = { d: Dashboard; v: VisaoGeral; h: Hoje; agora: Date };
 
 export function serializarComDatas(valor: unknown): string {
   return JSON.stringify(valor, function (this: Record<string, unknown>, chave, v) {
@@ -31,13 +32,14 @@ export async function carregarPainelDashboard(workspaceId: string): Promise<Pain
   const calcular = unstable_cache(
     async () => {
       const agora = new Date();
-      const [d, v] = await Promise.all([
+      const [d, v, h] = await Promise.all([
         carregarDashboard(prisma, workspaceId, agora),
         carregarVisaoGeral(prisma, workspaceId, agora),
+        carregarHoje(prisma, workspaceId, agora),
       ]);
-      return serializarComDatas({ d, v, agora });
+      return serializarComDatas({ d, v, h, agora });
     },
-    ["opi-dashboard-v1", workspaceId],
+    ["opi-dashboard-v2", workspaceId],
     { revalidate: DASHBOARD_CACHE_SEGUNDOS, tags: [`opi-dashboard:${workspaceId}`] },
   );
   return desserializarComDatas<Painel>(await calcular());
