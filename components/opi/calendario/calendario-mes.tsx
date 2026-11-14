@@ -232,7 +232,7 @@ export function CalendarioMes() {
               return (
                 <div
                   key={dia ?? `vazio-${i}`}
-                  className={`group min-h-16 min-w-0 p-1 sm:min-h-24 sm:p-1.5 ${dia ? "bg-surface-strong" : "bg-surface-strong"}`}
+                  className={`group min-h-16 min-w-0 p-1 sm:min-h-24 sm:p-1.5 ${dia ? "bg-surface-strong" : "bg-background"}`}
                 >
                   {dia && (
                     <>
