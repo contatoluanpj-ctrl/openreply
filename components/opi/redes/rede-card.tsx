@@ -1,6 +1,7 @@
 import { Badge, type BadgeTone } from "@/components/opi";
 import { ESTADO_ROTULO, rotuloMetrica, type RedeEstado, type RedeView } from "@/lib/opi/redes";
 import { RedeIcone } from "./rede-icone";
+import { rotuloUltimoPost } from "./ultimo-post";
 
 const TONE: Record<RedeEstado, BadgeTone> = { conectado: "success", sem_dados: "neutral", sem_conta: "neutral" };
 const nf = new Intl.NumberFormat("pt-BR");
@@ -58,7 +59,19 @@ export function RedeCard({ rede }: { rede: RedeView }) {
         <div className="rounded-xl border border-dashed border-[#111217]/15 bg-white/40 px-3 py-2.5 text-xs leading-relaxed text-muted">
           {rede.funcoes.join(" · ")}
         </div>
-        <p className="mt-3 flex justify-between text-xs text-muted">
+        {/* Cor da tela inteira: o card sem dados fica a 70% de opacidade e text-muted cairia abaixo de 4,5:1. */}
+        {rede.tipo === "social" && (
+          <p className="mt-3 text-xs text-foreground">
+            {rede.ultimoPostEm ? (
+              <>
+                Último post: <span className="font-semibold">{rotuloUltimoPost(rede.ultimoPostEm)}</span>
+              </>
+            ) : (
+              "Nenhum post ainda"
+            )}
+          </p>
+        )}
+        <p className="mt-1.5 flex justify-between gap-2 text-xs text-muted">
           <span>{rede.coletadoEm ? "Coletado em" : "Sem coleta"}</span>
           {rede.coletadoEm && <span className="text-foreground">{df.format(new Date(rede.coletadoEm))}</span>}
         </p>

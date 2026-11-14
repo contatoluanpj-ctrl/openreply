@@ -2,8 +2,11 @@
 
 // Chip compacto de um post na grade do Calendário: ícone do tipo, hora HH:mm (São Paulo) e cor discreta
 // do status. Uma linha só, nunca estoura a célula; no celular fica só o ícone (a hora aparece na Lista).
+// Os destinos entram na descrição (title e leitor de tela) e, em tela larga, como "publicados/total";
+// os selos por rede ficam na Lista e no detalhe do post, onde cabem.
 import { temAviso } from "@/lib/opi/aviso";
 import { horaSP, type PostStatusOpi, type PostTipoOpi } from "@/lib/opi/posts-schema";
+import { contagemPublicados, descreverDestinos } from "./destinos-texto";
 import type { PostCalendario } from "./tipos";
 
 export const STATUS_ROTULO: Record<PostStatusOpi, string> = {
@@ -63,6 +66,7 @@ export function descreverPost(p: PostCalendario, pendencia?: string): string {
   const partes = [`${TIPO_ROTULO[p.tipo]} às ${horaSP(p.agendadoPara)}`, STATUS_ROTULO[p.status]];
   if (!temAviso(p.legenda)) partes.push("sem o aviso obrigatório");
   if (pendencia) partes.push(pendencia);
+  if (p.destinos?.length) partes.push(`destinos: ${descreverDestinos(p.destinos)}`);
   return partes.join(", ");
 }
 
@@ -76,7 +80,10 @@ export function ChipPost({
   onAbrir: () => void;
 }) {
   const semAviso = !temAviso(post.legenda);
-  const alerta = semAviso || !!pendencia;
+  const destinos = post.destinos ?? [];
+  // Destino que falhou também pede atenção, mesmo com o post publicado (ex.: saiu no Instagram, falhou no YouTube).
+  const alerta = semAviso || !!pendencia || destinos.some((d) => d.status === "ERRO");
+  const publicados = contagemPublicados(destinos);
   const cor = STATUS_CLASSE[post.status];
   const descricao = descreverPost(post, pendencia);
   return (
@@ -89,6 +96,11 @@ export function ChipPost({
     >
       <IconeTipo tipo={post.tipo} />
       <span className="hidden truncate sm:inline">{horaSP(post.agendadoPara)}</span>
+      {publicados && destinos.length > 1 && (
+        <span aria-hidden className="hidden shrink-0 text-[10px] font-semibold opacity-80 xl:inline">
+          {publicados}
+        </span>
+      )}
       {alerta ? (
         <span aria-hidden className="ml-auto hidden h-1.5 w-1.5 shrink-0 rounded-full bg-error sm:inline-block" />
       ) : (

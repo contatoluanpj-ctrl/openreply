@@ -7,6 +7,7 @@ import { temAviso } from "@/lib/opi/aviso";
 import { deslocarMes, diaSP, horaSP, mesAtual, POST_STATUS } from "@/lib/opi/posts-schema";
 import { ChavePublicador } from "./chave-publicador";
 import { ChipPost, IconeTipo, STATUS_CLASSE, STATUS_ROTULO, TIPO_ROTULO } from "./chip-post";
+import { PainelDestinos, SelosDestinos } from "./destinos-post";
 import { EditorPost } from "./editor-post";
 import type { PostCalendario } from "./tipos";
 
@@ -296,7 +297,7 @@ export function CalendarioMes() {
           ))}
           <li className="inline-flex items-center gap-1.5">
             <span aria-hidden className="h-2 w-2 rounded-full ring-1 ring-error" />
-            Contorno vermelho: falta o aviso ou há pendência
+            Contorno vermelho: falta o aviso, há pendência ou um destino falhou
           </li>
         </ul>
       </Card>
@@ -304,6 +305,16 @@ export function CalendarioMes() {
       {edicao && (
         <div ref={editorRef} className="scroll-mt-4">
           <Card title={edicao.post ? "Editar post" : "Novo rascunho"}>
+            {edicao.post && (edicao.post.destinos?.length ?? 0) > 0 && (
+              <div className="mb-5">
+                <PainelDestinos
+                  key={edicao.post.id}
+                  postId={edicao.post.id}
+                  destinos={edicao.post.destinos ?? []}
+                  onMudou={() => void carregar()}
+                />
+              </div>
+            )}
             <EditorPost
               key={edicao.post?.id ?? `novo-${edicao.dia ?? ""}`}
               post={edicao.post}
@@ -354,13 +365,16 @@ function ListaPosts({
               const cor = STATUS_CLASSE[p.status];
               const primeiraLinha = p.legenda.split("\n")[0]?.trim();
               return (
-                <li key={p.id}>
+                <li
+                  key={p.id}
+                  className={`overflow-hidden rounded-2xl border bg-white/45 ${
+                    semAvisoPost || pend ? "border-error/50" : "border-border"
+                  }`}
+                >
                   <button
                     type="button"
                     onClick={() => onAbrir(p)}
-                    className={`flex w-full min-w-0 items-center gap-3 rounded-2xl border bg-white/45 px-3 py-2 text-left hover:bg-surface-hover ${
-                      semAvisoPost || pend ? "border-error/50" : "border-border"
-                    }`}
+                    className="flex w-full min-w-0 items-center gap-3 px-3 py-2 text-left hover:bg-surface-hover"
                   >
                     <span
                       className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${cor.chip}`}
@@ -388,6 +402,8 @@ function ListaPosts({
                       <span className="hidden sm:inline">{STATUS_ROTULO[p.status]}</span>
                     </span>
                   </button>
+                  {/* Selos fora do botão: ocupam a largura toda da linha e quebram sem rolar para o lado. */}
+                  <SelosDestinos destinos={p.destinos ?? []} className="px-3 pb-2.5 pt-0.5" />
                 </li>
               );
             })}
