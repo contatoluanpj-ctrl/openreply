@@ -140,6 +140,8 @@ describe("carregarDepartamento", () => {
     expect(r).toEqual({ pedidos: { ok: true, dados: [] }, pendencias: { ok: true, dados: [] } });
     expect(bruto.postAgendado.count).not.toHaveBeenCalled();
     expect(bruto.dmLog.count).not.toHaveBeenCalled();
+    expect(bruto.postAgendado.findMany).not.toHaveBeenCalled();
+    expect(bruto.automation.findMany).not.toHaveBeenCalled();
   });
 
   it("se a consulta de pedidos falha, o bloco fica indisponível e o resto aparece", async () => {
