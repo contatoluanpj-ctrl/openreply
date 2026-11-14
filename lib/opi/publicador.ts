@@ -120,6 +120,8 @@ type PostDaRodada = {
   legenda: string;
   agendadoPara: Date;
   status: string;
+  mediaId?: string | null;
+  permalink?: string | null;
   destinos?: DestinoDaRodada[];
 };
 
@@ -276,6 +278,19 @@ export async function rodarPublicador(agora: Date = new Date(), depsTeste?: Deps
           data: { status: "PENDENTE", erro: null, tentativas: 0 },
         });
         if (solto.count === 1) Object.assign(igParado, { status: "PENDENTE", erro: null, tentativas: 0 });
+      }
+
+      // Post já PUBLICADO quer dizer que o Instagram já saiu (o resumo segue o Instagram). Se o destino instagram
+      // dele ainda está pendente (publicado pelo worker antigo depois da migração, ou marcado por script), o destino
+      // só é acertado com os dados do post. Nunca é publicado de novo.
+      const igAtrasado = !eraAprovado ? destinos.find((d) => d.rede === "instagram" && d.status === "PENDENTE") : undefined;
+      if (igAtrasado) {
+        const dados = { status: "PUBLICADO" as const, externoId: post.mediaId ?? null, permalink: post.permalink ?? null, erro: null };
+        await prisma.postDestino.updateMany({
+          where: { id: igAtrasado.id, status: "PENDENTE" },
+          data: { ...dados, publicadoEm: post.agendadoPara },
+        });
+        Object.assign(igAtrasado, dados);
       }
 
       // Sem a configuração da Meta, Instagram e Facebook esperam (como antes: nada é travado).

@@ -326,6 +326,25 @@ describe("idempotência por destino", () => {
     expect(mockPrisma.postAgendado.update).not.toHaveBeenCalled();
   });
 
+  it("post já PUBLICADO com destino instagram pendente: o destino é acertado, nunca publicado de novo", async () => {
+    // Caso real: o worker antigo publica entre a migração e a troca do worker, e o destino fica PENDENTE.
+    const agendadoPara = new Date("2026-11-20T20:59:00Z");
+    mockPrisma.postAgendado.findMany.mockResolvedValue([
+      reel([destino("instagram"), destino("facebook")], { status: "PUBLICADO", mediaId: "ig-antigo", permalink: "https://instagram.com/reel/antigo" }),
+    ]);
+    const f = fetchFalso([...IG_OK, ...FB_OK]);
+    const r = await rodarPublicador(AGORA, deps(f.fn));
+
+    expect(f.chamadas.some((c) => c.url.includes("/IG1/"))).toBe(false);
+    expect(mockPrisma.postDestino.updateMany).toHaveBeenCalledWith({
+      where: { id: "d-instagram", status: "PENDENTE" },
+      data: { status: "PUBLICADO", externoId: "ig-antigo", permalink: "https://instagram.com/reel/antigo", erro: null, publicadoEm: agendadoPara },
+    });
+    // A outra rede segue normalmente.
+    expect(r.publicados).toBe(1);
+    expect(dadosDoDestino("d-facebook")[0]).toMatchObject({ status: "PUBLICADO" });
+  });
+
   it("trava do destino: se outra rodada já pegou (count 0), não chama a rede", async () => {
     mockPrisma.postAgendado.findMany.mockResolvedValue([reel([destino("instagram")])]);
     mockPrisma.postDestino.updateMany.mockResolvedValue({ count: 0 });
