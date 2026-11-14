@@ -1,9 +1,11 @@
 import { I18nProvider } from "@/lib/i18n/provider";
 import { getI18n } from "@/lib/i18n/server";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import DashboardShell from "@/components/dashboard-shell";
 import { sessaoAtual } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
+import { COOKIE_TEMA, lerTema } from "@/lib/opi/tema";
 import { acceptPendingInvitationsForUser, ensureWorkspaceForUser, getPrimaryWorkspace } from "@/lib/workspace";
 
 export async function generateMetadata() {
@@ -37,9 +39,12 @@ export default async function DashboardLayout({
     select: { username: true },
   });
 
+  const tema = lerTema((await cookies()).get(COOKIE_TEMA)?.value);
+
   return (
     <I18nProvider locale={locale}>
       <DashboardShell
+        temaInicial={tema}
         workspaceName={workspace.name}
         instagramUsername={accounts[0]?.username ?? null}
         instagramAccountCount={accounts.length}
