@@ -10,9 +10,9 @@ import type * as G from "./graficos";
 function Reserva() {
   return (
     <section aria-hidden className="opi-glass flex min-h-[340px] min-w-0 flex-col gap-4 p-[22px]">
-      <div className="h-4 w-40 animate-pulse rounded-full bg-[#111217]/[0.06]" />
-      <div className="h-3 w-64 max-w-full animate-pulse rounded-full bg-[#111217]/[0.05]" />
-      <div className="flex-1 animate-pulse rounded-2xl bg-[#111217]/[0.05]" />
+      <div className="h-4 w-40 animate-pulse rounded-full bg-inset" />
+      <div className="h-3 w-64 max-w-full animate-pulse rounded-full bg-inset" />
+      <div className="flex-1 animate-pulse rounded-2xl bg-inset" />
     </section>
   );
 }

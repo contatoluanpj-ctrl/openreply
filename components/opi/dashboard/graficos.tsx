@@ -30,17 +30,13 @@ import type {
 import type { Bloco } from "@/lib/opi/visao-geral";
 import type { RedeId } from "@/lib/opi/redes";
 import { REDE_IDS } from "@/lib/opi/redes";
+import { COR_GRAFICO, EIXO_GRAFICO, RAMPA_GRAFICO } from "@/lib/opi/cores-grafico";
 import { numero, pct } from "./formato";
 
-const COR = {
-  principal: "#D9541E",
-  secundaria: "#111217",
-  terciaria: "rgba(17,18,23,.35)",
-  grade: "rgba(17,18,23,.08)",
-  eixo: "rgba(17,18,23,.5)",
-};
-const FATIAS = ["#D9541E", "#111217", "rgba(17,18,23,.35)", "#E8946F", "rgba(17,18,23,.6)", "rgba(217,84,30,.45)", "rgba(17,18,23,.15)"];
-const EIXO = { fontSize: 11, fill: COR.eixo };
+// Cores só por variável do tema (lib/opi/cores-grafico.ts).
+const COR = COR_GRAFICO;
+const FATIAS = RAMPA_GRAFICO;
+const EIXO = EIXO_GRAFICO;
 
 // ---------------------------------------------------------------------------------------------------------------
 // Moldura
@@ -60,7 +56,7 @@ function Seletor({ valor, onChange }: { valor: Periodo; onChange: (p: Periodo) =
 function Vazio({ titulo, texto }: { titulo: string; texto: string }) {
   return (
     <div className="flex h-full min-h-[240px] flex-col items-center justify-center px-6 text-center">
-      <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[rgba(217,84,30,.12)] text-accent" aria-hidden>
+      <span className="grid h-10 w-10 place-items-center rounded-2xl bg-accent-soft text-accent-text" aria-hidden>
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
           <path d="M3 3v18h18M7 15l4-4 3 3 5-6" />
         </svg>
@@ -114,11 +110,11 @@ function Dica({ active, payload, label, titulo }: { active?: boolean; payload?: 
   if (!active || !payload?.length) return null;
   return (
     <div className="opi-tip">
-      <i className="block not-italic text-white/50">{titulo ? titulo(payload, label) : label}</i>
+      <i className="block not-italic text-muted">{titulo ? titulo(payload, label) : label}</i>
       {payload.map((p) => (
         <div key={String(p.name)} className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full" style={{ background: p.color }} aria-hidden />
-          <span className="text-white/70">{p.name}</span>
+          <span className="text-muted">{p.name}</span>
           <b className="ml-auto text-sm tabular-nums">{typeof p.value === "number" ? numero(p.value) : p.value}</b>
         </div>
       ))}
@@ -167,7 +163,7 @@ export function GraficoSeguidores({ bloco, className }: { bloco: Bloco<PorPeriod
       ) : comValor.length < 2 ? (
         <Vazio
           titulo="Ainda sem histórico"
-          texto="A linha aparece quando houver pelo menos dois dias de seguidores coletados do Instagram (coleta diária do OpenReply)."
+          texto="A linha aparece quando houver pelo menos dois dias de seguidores coletados do Instagram (coleta diária do painel)."
         />
       ) : (
         <ResponsiveContainer width="100%" height={260}>
@@ -190,7 +186,7 @@ export function GraficoSeguidores({ bloco, className }: { bloco: Bloco<PorPeriod
               strokeWidth={2.5}
               fill={`url(#seg-${gid})`}
               connectNulls
-              activeDot={{ r: 5, fill: COR.principal, stroke: "#fff", strokeWidth: 2 }}
+              activeDot={{ r: 5, fill: COR.principal, stroke: COR.contorno, strokeWidth: 2 }}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -237,7 +233,7 @@ export function GraficoDms({ bloco, className }: { bloco: Bloco<PorPeriodo<DiaDm
             <CartesianGrid vertical={false} stroke={COR.grade} />
             <XAxis dataKey="rotulo" tick={EIXO} axisLine={false} tickLine={false} minTickGap={16} />
             <YAxis tick={EIXO} axisLine={false} tickLine={false} width={32} allowDecimals={false} />
-            <Tooltip content={<Dica />} cursor={{ fill: "rgba(17,18,23,.04)" }} />
+            <Tooltip content={<Dica />} cursor={{ fill: COR.cursor }} />
             <Bar dataKey="enviadas" name="Enviadas" stackId="dm" fill={COR.principal} />
             <Bar dataKey="seguradas" name="Seguradas" stackId="dm" fill={COR.secundaria} />
             <Bar dataKey="falhas" name="Falhas" stackId="dm" fill={COR.terciaria} radius={[6, 6, 0, 0]} />
@@ -280,9 +276,9 @@ export function GraficoPalavras({ bloco, className }: { bloco: Bloco<PorPeriodo<
             <BarChart data={dados} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }} barGap={3} barCategoryGap="26%">
               <CartesianGrid horizontal={false} vertical={false} />
               <XAxis type="number" hide allowDecimals={false} />
-              <YAxis type="category" dataKey="palavra" tick={{ ...EIXO, fill: "#111217", fontWeight: 600 }} axisLine={false} tickLine={false} width={92} />
+              <YAxis type="category" dataKey="palavra" tick={{ ...EIXO, fill: COR.texto, fontWeight: 600 }} axisLine={false} tickLine={false} width={92} />
               <Tooltip
-                cursor={{ fill: "rgba(17,18,23,.04)" }}
+                cursor={{ fill: COR.cursor }}
                 content={
                   <Dica
                     titulo={(pl, l) => {
@@ -398,7 +394,7 @@ export function GraficoHorario({ bloco, className }: { bloco: Bloco<PorPeriodo<H
             <CartesianGrid vertical={false} stroke={COR.grade} />
             <XAxis dataKey="rotulo" tick={EIXO} axisLine={false} tickLine={false} interval={2} />
             <YAxis tick={EIXO} axisLine={false} tickLine={false} width={32} allowDecimals={false} />
-            <Tooltip content={<Dica />} cursor={{ fill: "rgba(17,18,23,.04)" }} />
+            <Tooltip content={<Dica />} cursor={{ fill: COR.cursor }} />
             <Bar dataKey="comentarios" name="Comentários" radius={[6, 6, 0, 0]}>
               {dados.map((d) => (
                 <Cell key={d.hora} fill={picos.includes(d.hora) ? COR.principal : COR.terciaria} />

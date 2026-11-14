@@ -15,6 +15,7 @@
 import type { Locale } from "@/lib/i18n";
 import { useI18n } from "@/lib/i18n/provider";
 import { useState } from "react";
+import { COR_GRAFICO } from "@/lib/opi/cores-grafico";
 import {
   CartesianGrid,
   Line,
@@ -31,16 +32,17 @@ export interface FollowerChartPoint {
   delta: number | null;
 }
 
-// Cores do painel OPI Central (fundo escuro): linha branca, grade e eixo em
-// cinza, iguais aos tokens --color-border e --color-muted de .opi-central.
-const SERIES_COLOR = "#fafafa";
-const GRID_COLOR = "#2a2a2a";
-const AXIS_TEXT = "#a3a3a3";
-const DOT_STROKE = "#0a0a0a";
+// Cores do tema do OPI Central, por variável (lib/opi/cores-grafico.ts): linha laranja,
+// grade e eixo em cinza. Antes a linha era branca fixa e sumia no fundo claro.
+const SERIES_COLOR = COR_GRAFICO.principal;
+const GRID_COLOR = COR_GRAFICO.grade;
+const AXIS_TEXT = COR_GRAFICO.eixo;
+const DOT_STROKE = COR_GRAFICO.contorno;
 
 function formatCompact(n: number, locale: Locale): string {
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  // Abaixo de 10 mil o eixo mostra o número inteiro: com "1.3K" os degraus do eixo ficavam repetidos.
+  if (Math.abs(n) >= 10_000) return `${(n / 1_000).toFixed(1)}K`;
   return n.toLocaleString(locale);
 }
 
@@ -68,7 +70,7 @@ function ChartTooltip({
   const point = payload[0].payload;
 
   return (
-    <div className="rounded border border-border bg-surface px-3 py-2 text-xs shadow-lg">
+    <div className="opi-tip">
       <p className="text-muted">{formatDay(point.date, locale)}</p>
       <p className="mt-1 font-semibold text-foreground">
         {point.followers.toLocaleString(locale)} {t("followers")}
@@ -146,7 +148,7 @@ export default function FollowerChart({
         <div className="mt-4 max-h-72 overflow-y-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-zinc-500">
+              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-faint">
                 <th className="py-2 pr-4 font-medium">{t("Date")}</th>
                 <th className="py-2 px-3 font-medium text-right">{t("Followers")}</th>
                 <th className="py-2 pl-3 font-medium text-right">{t("Change")}</th>
@@ -207,7 +209,7 @@ export default function FollowerChart({
                 type="monotone"
                 dataKey="followers"
                 stroke={SERIES_COLOR}
-                strokeWidth={2}
+                strokeWidth={2.5}
                 dot={false}
                 activeDot={{ r: 4, fill: SERIES_COLOR, stroke: DOT_STROKE, strokeWidth: 2 }}
                 isAnimationActive={false}

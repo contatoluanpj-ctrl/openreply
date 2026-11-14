@@ -62,7 +62,7 @@ export default function IntegrationsPage() {
         {[30, 60, 90].map(value => <option key={value} value={value}>{t("{days} days", { days: value })}</option>)}
       </select></label>
       <p className="text-sm text-muted">{t("Applies only to new keys. Existing expiration dates do not change.")}</p>
-      <button disabled={busy || !name.trim()} onClick={create} className="rounded bg-accent px-4 py-2 text-white disabled:opacity-50">{t("Create key for {days} days", { days })}</button>
+      <button disabled={busy || !name.trim()} onClick={create} className="rounded bg-accent px-4 py-2 text-accent-foreground disabled:opacity-50">{t("Create key for {days} days", { days })}</button>
       {token && <div role="status" className="space-y-2">
         <p>{t("Shown once. Store securely; never put keys in URLs, screenshots or GitHub.")}</p>
         <input aria-label={t("New service key")} type="password" readOnly value={token} className="w-full rounded border border-border p-2" />

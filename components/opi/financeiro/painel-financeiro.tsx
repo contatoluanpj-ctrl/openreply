@@ -86,7 +86,7 @@ function Seg<T extends string>({ rotulo, valor, opcoes, onChange }: { rotulo: st
 }
 
 const BOTAO_PILULA =
-  "rounded-full border border-[rgba(17,18,23,.12)] bg-white/50 px-3 py-1 text-xs font-semibold text-foreground/75 transition-colors hover:bg-white/90 hover:text-foreground";
+  "rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-foreground/75 transition-colors hover:bg-surface-hover hover:text-foreground";
 
 export function PainelFinanceiro() {
   const [mes, setMes] = useState(mesAtual());
@@ -182,8 +182,8 @@ export function PainelFinanceiro() {
     <div className="grid gap-6">
       {/* Controles: mês de referência em pílula. */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1 rounded-full border border-[rgba(17,18,23,.1)] bg-white/55 p-1 backdrop-blur">
-          <button type="button" aria-label="Mês anterior" onClick={() => setMes((m) => somarMes(m, -1))} className="grid h-8 w-8 place-items-center rounded-full text-foreground/70 hover:bg-white">
+        <div className="flex items-center gap-1 rounded-full border border-border bg-surface p-1 backdrop-blur">
+          <button type="button" aria-label="Mês anterior" onClick={() => setMes((m) => somarMes(m, -1))} className="grid h-8 w-8 place-items-center rounded-full text-foreground/70 hover:bg-surface-hover">
             ‹
           </button>
           <label className="relative px-2 text-sm font-semibold text-foreground first-letter:uppercase">
@@ -196,7 +196,7 @@ export function PainelFinanceiro() {
               className="absolute inset-0 cursor-pointer opacity-0"
             />
           </label>
-          <button type="button" aria-label="Próximo mês" onClick={() => setMes((m) => somarMes(m, 1))} className="grid h-8 w-8 place-items-center rounded-full text-foreground/70 hover:bg-white">
+          <button type="button" aria-label="Próximo mês" onClick={() => setMes((m) => somarMes(m, 1))} className="grid h-8 w-8 place-items-center rounded-full text-foreground/70 hover:bg-surface-hover">
             ›
           </button>
         </div>
@@ -302,7 +302,7 @@ export function PainelFinanceiro() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-display text-base font-bold text-foreground">{editando ? "Editar lançamento" : "Novo lançamento"}</h3>
           {editando && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/45 bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/45 bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent-text">
               Editando
             </span>
           )}
@@ -349,7 +349,7 @@ export function PainelFinanceiro() {
                   {["Data", "Descrição", "Categoria", "Tipo", "Valor", "Status", ""].map((h, i) => (
                     <th
                       key={h || "acoes"}
-                      className={`sticky top-0 z-[1] whitespace-nowrap bg-[#eef1f4]/95 px-3.5 py-3 font-semibold backdrop-blur ${i === 4 ? "text-right" : ""}`}
+                      className={`sticky top-0 z-[1] whitespace-nowrap bg-surface-strong px-3.5 py-3 font-semibold backdrop-blur ${i === 4 ? "text-right" : ""}`}
                     >
                       {h}
                     </th>
@@ -358,7 +358,7 @@ export function PainelFinanceiro() {
               </thead>
               <tbody>
                 {(lista ?? []).map((l) => (
-                  <tr key={l.id} className="border-t border-[rgba(17,18,23,.07)] hover:bg-white/40">
+                  <tr key={l.id} className="border-t border-border hover:bg-surface-hover">
                     <td className="whitespace-nowrap px-3.5 py-[11px] tabular-nums text-muted">{dataBR(l.data)}</td>
                     <td className="px-3.5 py-[11px] text-foreground">{l.descricao}</td>
                     <td className="px-3.5 py-[11px] text-muted">{l.categoria}</td>
@@ -368,17 +368,17 @@ export function PainelFinanceiro() {
                         {l.tipo === "RECEITA" ? "Receita" : "Despesa"}
                       </span>
                     </td>
-                    <td className={`whitespace-nowrap px-3.5 py-[11px] text-right font-semibold tabular-nums ${l.tipo === "RECEITA" ? "text-accent" : "text-foreground"}`}>
+                    <td className={`whitespace-nowrap px-3.5 py-[11px] text-right font-semibold tabular-nums ${l.tipo === "RECEITA" ? "text-accent-text" : "text-foreground"}`}>
                       {l.tipo === "DESPESA" ? "− " : "+ "}
                       {formatarBRL(paraCentavos(l.valor))}
                     </td>
                     <td className="px-3.5 py-[11px]">
                       {l.status === "PAGO" ? (
-                        <span className="inline-block whitespace-nowrap rounded-full border border-accent/45 bg-accent/10 px-[9px] py-[3px] text-[11px] font-bold text-accent">
+                        <span className="inline-block whitespace-nowrap rounded-full border border-accent/45 bg-accent/10 px-[9px] py-[3px] text-[11px] font-bold text-accent-text">
                           {l.tipo === "RECEITA" ? "Recebido" : "Pago"}
                         </span>
                       ) : (
-                        <span className="inline-block whitespace-nowrap rounded-full border border-[rgba(17,18,23,.16)] px-[9px] py-[3px] text-[11px] font-bold text-foreground/60">
+                        <span className="inline-block whitespace-nowrap rounded-full border border-border px-[9px] py-[3px] text-[11px] font-bold text-foreground/60">
                           Previsto
                         </span>
                       )}
@@ -396,7 +396,7 @@ export function PainelFinanceiro() {
                         <button
                           type="button"
                           onClick={() => void apagar(l)}
-                          className="rounded-full border border-[rgba(17,18,23,.12)] bg-white/50 px-3 py-1 text-xs font-semibold text-foreground/60 transition-colors hover:border-error/40 hover:bg-error/10 hover:text-error"
+                          className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold text-foreground/60 transition-colors hover:border-error/40 hover:bg-error/10 hover:text-error"
                         >
                           Apagar
                         </button>

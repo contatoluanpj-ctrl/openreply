@@ -19,13 +19,15 @@ import {
   YAxis,
 } from "recharts";
 import type { Periodo, StatsCampanhas } from "@/lib/opi/campanhas-dados";
+import { COR_GRAFICO, EIXO_GRAFICO } from "@/lib/opi/cores-grafico";
 
-const ACC = "#D9541E";
-const INK = "#111217";
-const TER = "rgba(17,18,23,.35)";
-const QUA = "rgba(17,18,23,.12)";
-const GRADE = "rgba(17,18,23,.08)";
-const EIXO = { fontSize: 11, fill: "rgba(17,18,23,.5)" };
+// Cores só por variável do tema (lib/opi/cores-grafico.ts).
+const ACC = COR_GRAFICO.principal;
+const INK = COR_GRAFICO.secundaria;
+const TER = COR_GRAFICO.terciaria;
+const QUA = COR_GRAFICO.quaternaria;
+const GRADE = COR_GRAFICO.grade;
+const EIXO = EIXO_GRAFICO;
 
 const fmt = new Intl.NumberFormat("pt-BR");
 
@@ -68,7 +70,7 @@ function Kpi({ icone, rotulo, valor, dica, destaque }: { icone: ReactNode; rotul
         <Icone d={icone} />
         {rotulo}
       </p>
-      <p className={`opi-num mt-1.5 text-[28px] leading-tight ${destaque ? "text-[#D9541E]" : ""}`}>{valor}</p>
+      <p className={`opi-num mt-1.5 text-[28px] leading-tight ${destaque ? "text-accent-text" : ""}`}>{valor}</p>
       <p className="mt-1 text-xs text-muted">{dica}</p>
     </div>
   );
@@ -92,7 +94,7 @@ function Grafico({ titulo, olhar, acoes, className = "", children }: { titulo: s
 function Vazio({ titulo, texto }: { titulo: string; texto: string }) {
   return (
     <div className="flex min-h-[240px] flex-col items-center justify-center px-6 text-center">
-      <svg viewBox="0 0 24 24" className="h-7 w-7 text-[#D9541E]/70" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden>
+      <svg viewBox="0 0 24 24" className="h-7 w-7 text-accent-text" fill="none" stroke="currentColor" strokeWidth={1.6} aria-hidden>
         <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" strokeLinecap="round" />
       </svg>
       <b className="mt-2.5 text-sm text-foreground/80">{titulo}</b>
@@ -108,11 +110,11 @@ function Dica({ active, payload, label, rotulo }: { active?: boolean; payload?: 
   const titulo = label !== undefined && label !== "" ? (rotulo ? rotulo(String(label)) : String(label)) : String(payload[0]?.name ?? "");
   return (
     <div className="opi-tip">
-      <i className="block not-italic text-white/60">{titulo}</i>
+      <i className="block not-italic text-muted">{titulo}</i>
       {payload.map((p) => (
         <div key={String(p.name)} className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-white/80">{p.name}</span>
+          <span className="text-muted">{p.name}</span>
           <b className="ml-auto pl-3 text-sm">{fmt.format(Number(p.value ?? 0))}</b>
         </div>
       ))}
@@ -229,10 +231,10 @@ export function PainelCampanhas({ accountId, versao }: { accountId: string; vers
       {kpis.seguradas > 0 && (
         <Link
           href="/dashboard/palavras"
-          className="opi-inset flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-white/40"
+          className="opi-inset flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-surface-hover"
         >
           <span>
-            <b className="text-[#D9541E]">{kpis.seguradas}</b> DM{kpis.seguradas === 1 ? "" : "s"} segurada
+            <b className="text-accent-text">{kpis.seguradas}</b> DM{kpis.seguradas === 1 ? "" : "s"} segurada
             {kpis.seguradas === 1 ? "" : "s"} pelo Jev esperando revisão.
           </span>
           <span className="text-xs font-semibold text-muted">Revisar →</span>
@@ -261,7 +263,7 @@ export function PainelCampanhas({ accountId, versao }: { accountId: string; vers
                   <CartesianGrid stroke={GRADE} vertical={false} />
                   <XAxis dataKey="dia" tickFormatter={diaCurto} tick={EIXO} axisLine={false} tickLine={false} minTickGap={24} />
                   <YAxis allowDecimals={false} tick={EIXO} axisLine={false} tickLine={false} width={48} />
-                  <Tooltip content={<Dica rotulo={diaCurto} />} cursor={{ stroke: "rgba(17,18,23,.15)" }} />
+                  <Tooltip content={<Dica rotulo={diaCurto} />} cursor={{ stroke: COR_GRAFICO.terciaria }} />
                   <Area type="monotone" dataKey="comentarios" name="Comentários" stroke={TER} strokeWidth={1.5} fill="none" />
                   <Area type="monotone" dataKey="dms" name="DMs enviadas" stroke={ACC} strokeWidth={2.2} fill="url(#opi-camp-area)" />
                 </AreaChart>
@@ -330,7 +332,7 @@ export function PainelCampanhas({ accountId, versao }: { accountId: string; vers
                     width={140}
                     tickFormatter={(n: string) => (n.length > 20 ? `${n.slice(0, 19)}…` : n)}
                   />
-                  <Tooltip content={<Dica />} cursor={{ fill: "rgba(17,18,23,.04)" }} />
+                  <Tooltip content={<Dica />} cursor={{ fill: COR_GRAFICO.cursor }} />
                   <Bar dataKey="comentarios" name="Comentários" fill={TER} radius={6} barSize={12} />
                   <Bar dataKey="dms" name="DMs enviadas" fill={ACC} radius={6} barSize={12} />
                 </BarChart>
@@ -361,9 +363,9 @@ export function PainelCampanhas({ accountId, versao }: { accountId: string; vers
               </thead>
               <tbody>
                 {porCampanha.map((c) => (
-                  <tr key={c.id} className="border-t border-[#111217]/[.07] align-top tabular-nums">
+                  <tr key={c.id} className="border-t border-border align-top tabular-nums">
                     <td className="px-[14px] py-[11px]">
-                      <Link href={`/campaigns/${c.id}`} className="font-semibold hover:text-[#D9541E]">
+                      <Link href={`/campaigns/${c.id}`} className="font-semibold hover:text-accent-text">
                         {c.nome}
                       </Link>
                       {c.username && <span className="block text-xs text-muted">@{c.username}</span>}
@@ -374,7 +376,7 @@ export function PainelCampanhas({ accountId, versao }: { accountId: string; vers
                     <td className="px-[14px] py-[11px]">
                       <div className="flex max-w-[16rem] flex-wrap gap-1">
                         {c.palavras.slice(0, 4).map((p) => (
-                          <span key={p} className="rounded-full bg-[#111217]/[.05] px-2 py-0.5 text-[11px] font-semibold">
+                          <span key={p} className="rounded-full bg-inset px-2 py-0.5 text-[11px] font-semibold">
                             {p}
                           </span>
                         ))}

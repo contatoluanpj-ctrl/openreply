@@ -359,8 +359,8 @@ export function mensagemTelegram(x: {
 }): string {
   const linhas = [
     x.dmJaEnviada
-      ? `OpenReply OPI: ${x.origem} segurado. A DM já tinha sido enviada antes; só a resposta pública foi segurada.`
-      : `OpenReply OPI: ${x.origem} segurado, nada foi enviado (nem DM nem resposta pública).`,
+      ? `OPI Central: ${x.origem} segurado. A DM já tinha sido enviada antes; só a resposta pública foi segurada.`
+      : `OPI Central: ${x.origem} segurado, nada foi enviado (nem DM nem resposta pública).`,
     `Campanha: ${x.campanha}`,
     `Usuário: @${x.usuario || "desconhecido"}`,
     omitirTexto(x.decisao, x.p)
@@ -375,7 +375,7 @@ export function mensagemTelegram(x: {
 
 export function mensagemPausa(x: { campanha: string; usuario: string | null }): string {
   return [
-    `OpenReply OPI: 1ª DM da campanha "${x.campanha}" ENVIADA (para @${x.usuario || "desconhecido"}).`,
+    `OPI Central: 1ª DM da campanha "${x.campanha}" ENVIADA (para @${x.usuario || "desconhecido"}).`,
     "A campanha foi PAUSADA (isActive=false) para a Compliance conferir texto, aviso e link desta DM (PARECER §8.2-4).",
     "As próximas DMs não saem até você reativar a campanha no painel.",
   ].join("\n");
@@ -384,12 +384,12 @@ export function mensagemPausa(x: { campanha: string; usuario: string | null }): 
 export function mensagemPrimeiraDmFalhou(x: { campanha: string; usuario: string | null; incerta?: boolean }): string {
   if (x.incerta) {
     return [
-      `OpenReply OPI: a entrega da 1ª DM da campanha "${x.campanha}" (para @${x.usuario || "desconhecido"}) NÃO foi confirmada.`,
+      `OPI Central: a entrega da 1ª DM da campanha "${x.campanha}" (para @${x.usuario || "desconhecido"}) NÃO foi confirmada.`,
       "Ela pode ter saído. A campanha ficou PAUSADA: confira no Instagram (Direct) antes de levar à Compliance ou reativar.",
     ].join("\n");
   }
   return [
-    `OpenReply OPI: a 1ª DM da campanha "${x.campanha}" (para @${x.usuario || "desconhecido"}) NÃO saiu.`,
+    `OPI Central: a 1ª DM da campanha "${x.campanha}" (para @${x.usuario || "desconhecido"}) NÃO saiu.`,
     "A campanha ficou PAUSADA e não há DM para a Compliance conferir. Veja o erro em Logs; reative a campanha para tentar com o próximo comentário.",
   ].join("\n");
 }
@@ -481,7 +481,7 @@ export function respostasPublicasPermitidas(
 export function mensagemSemCampanha(x: { usuario: string | null; texto: string; midia: string }): string {
   const trecho = mascararTexto(x.texto);
   return [
-    "OpenReply OPI: comentário sem campanha ativa que case. Nada foi enviado agora; responda você, se quiser.",
+    "OPI Central: comentário sem campanha ativa que case. Nada foi enviado agora; responda você, se quiser.",
     "Se era a palavra de uma campanha pausada (1ª DM em conferência ou /pausar_dm), a DM sai sozinha quando a campanha voltar (comentários de até 3 dias).",
     `Usuário: @${x.usuario || "desconhecido"}`,
     `Post: ${x.midia}`,

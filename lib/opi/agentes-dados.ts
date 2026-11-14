@@ -105,3 +105,14 @@ export function historicoRecente<T extends PedidoHistorico>(pedidos: readonly T[
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, limite);
 }
+
+/**
+ * Grade de cartões da tela Agentes: os diretores na ordem do registro (sem reordenar),
+ * cada um com a equipe que reporta a ele. A equipe só aparece quando o cartão é aberto.
+ */
+export function montarGrade(
+  cLevels: readonly MembroEquipe[],
+  operacionais: readonly MembroEquipe[],
+): ColunaOrganograma[] {
+  return cLevels.map((chefe) => ({ chefe, equipe: operacionais.filter((o) => o.reportaA === chefe.id) }));
+}

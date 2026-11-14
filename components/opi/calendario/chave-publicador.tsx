@@ -62,7 +62,7 @@ export function ChavePublicador() {
   const desabilitado = !estado || salvando || !estado.podeAlterar;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-border bg-white/40 px-3 py-2">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl border border-border bg-surface px-3 py-2">
       <button
         type="button"
         role="switch"
@@ -71,18 +71,18 @@ export function ChavePublicador() {
         disabled={desabilitado}
         onClick={alternar}
         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50 ${
-          ligado ? "border-accent bg-accent shadow-[0_0_14px_rgba(217,84,30,0.45)]" : "border-[#111217]/15 bg-[#111217]/10"
+          ligado ? "border-accent bg-accent" : "border-border bg-track"
         }`}
       >
         <span
           aria-hidden
-          className={`inline-block h-4.5 w-4.5 rounded-full bg-white shadow transition-transform ${ligado ? "translate-x-5.5" : "translate-x-0.5"}`}
+          className={`inline-block h-4.5 w-4.5 rounded-full bg-knob shadow transition-transform ${ligado ? "translate-x-5.5" : "translate-x-0.5"}`}
         />
       </button>
       <div className="min-w-0 text-sm leading-tight">
         <p className="font-semibold text-foreground">
           Publicação automática:{" "}
-          <span className={ligado ? "text-accent" : "text-muted"}>
+          <span className={ligado ? "text-accent-text" : "text-muted"}>
             {estado ? (ligado ? "ligada" : "desligada") : "…"}
           </span>
         </p>

@@ -3,12 +3,17 @@
 import { useState } from "react";
 import Sidebar from "@/components/sidebar";
 import TopBar from "@/components/top-bar";
+import { TEMA_PADRAO, cookieDoTema, type TemaOpi } from "@/lib/opi/tema";
 
 interface DashboardShellProps {
   children: React.ReactNode;
   workspaceName: string;
   instagramUsername: string | null;
   instagramAccountCount: number;
+  /** Variante do tema lida do cookie no servidor ("a" preto, "b" grafite). */
+  temaInicial?: TemaOpi;
+  /** Rota a marcar no menu no lugar da rota do navegador (só a prévia local usa). */
+  rotaAtual?: string;
 }
 
 export default function DashboardShell({
@@ -16,13 +21,21 @@ export default function DashboardShell({
   workspaceName,
   instagramUsername,
   instagramAccountCount,
+  temaInicial = TEMA_PADRAO,
+  rotaAtual,
 }: DashboardShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [tema, setTema] = useState<TemaOpi>(temaInicial);
+
+  function trocarTema(novo: TemaOpi) {
+    setTema(novo);
+    document.cookie = cookieDoTema(novo);
+  }
 
   return (
     // h-dvh, not h-screen: on mobile browsers the URL bar eats into 100vh, which
     // would push the composer and pagination controls below the fold.
-    <div className="opi-central flex h-dvh overflow-hidden bg-background text-foreground">
+    <div data-tema={tema} className="opi-central flex h-dvh overflow-hidden bg-background text-foreground">
       <div className="opi-aura" aria-hidden="true">
         <i />
         <i />
@@ -32,6 +45,9 @@ export default function DashboardShell({
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         workspaceName={workspaceName}
+        tema={tema}
+        onTema={trocarTema}
+        rotaAtual={rotaAtual}
       />
 
       <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden">

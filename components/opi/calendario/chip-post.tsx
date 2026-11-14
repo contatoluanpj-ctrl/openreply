@@ -21,10 +21,10 @@ export const TIPO_ROTULO: Record<PostTipoOpi, string> = { CARROSSEL: "Carrossel"
 
 /** Rascunho cinza, aprovado/publicando no detalhe, publicado verde, erro vermelho. Tudo em tom baixo. */
 export const STATUS_CLASSE: Record<PostStatusOpi, { chip: string; ponto: string }> = {
-  RASCUNHO: { chip: "border-[#111217]/10 bg-white/60 text-[#111217]/70", ponto: "bg-[#111217]/35" },
-  APROVADO: { chip: "border-accent/35 bg-accent/10 text-accent", ponto: "bg-accent" },
-  PUBLICANDO: { chip: "border-accent/35 bg-accent/10 text-accent", ponto: "bg-accent animate-pulse" },
-  PUBLICADO: { chip: "border-[#2f8f5b]/35 bg-[#2f8f5b]/10 text-[#26774b]", ponto: "bg-[#2f8f5b]" },
+  RASCUNHO: { chip: "border-border bg-surface text-muted", ponto: "bg-faint" },
+  APROVADO: { chip: "border-accent/35 bg-accent/10 text-accent-text", ponto: "bg-accent" },
+  PUBLICANDO: { chip: "border-accent/35 bg-accent/10 text-accent-text", ponto: "bg-accent animate-pulse" },
+  PUBLICADO: { chip: "border-success/40 bg-success/10 text-success", ponto: "bg-success" },
   ERRO: { chip: "border-error/40 bg-error/10 text-error", ponto: "bg-error" },
 };
 

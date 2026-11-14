@@ -1,1 +1,1 @@
-export { default } from "@/components/localized-layout";
+export { default } from "@/components/layout-entrada";

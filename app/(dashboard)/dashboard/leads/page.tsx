@@ -217,7 +217,7 @@ export default async function LeadsPage() {
             {semanas.map((s) => (
               <li key={s.semana} className="grid grid-cols-[4.5rem_1fr_3rem] items-center gap-3 text-sm">
                 <span className="text-muted">Sem. {s.rotulo}</span>
-                <span className="h-2.5 overflow-hidden rounded-full bg-[#111217]/[0.06]" aria-hidden>
+                <span className="h-2.5 overflow-hidden rounded-full bg-inset" aria-hidden>
                   <span className="block h-full rounded-full bg-accent" style={{ width: `${s.largura}%` }} />
                 </span>
                 <span className="text-right font-semibold tabular-nums text-foreground">{numero(s.leads)}</span>

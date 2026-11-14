@@ -221,7 +221,7 @@ export default function SettingsPage() {
         <div className="mt-6 pt-4 border-t border-border flex gap-3">
           <a
             href="/api/instagram/connect"
-            className="px-4 py-2 rounded text-sm font-medium transition-colors bg-accent text-white hover:bg-accent-hover"
+            className="px-4 py-2 rounded text-sm font-medium transition-colors bg-accent text-accent-foreground hover:bg-accent-hover"
           >
             {t("Connect using your own Meta app")}
           </a>
@@ -251,7 +251,7 @@ export default function SettingsPage() {
 
         {membersData?.invitations.length ? (
           <div className="mt-6 border-t border-border pt-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-faint">
               {t("Pending invites")}
             </p>
             <div className="space-y-3">
@@ -319,7 +319,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={busy === "invite"}
-              className="rounded bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+              className="rounded bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:opacity-50"
             >
               {busy === "invite" ? t("Inviting...") : t("Invite")}
             </button>

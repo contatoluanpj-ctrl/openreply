@@ -20,7 +20,7 @@ export function RedeCard({ rede }: { rede: RedeView }) {
     <article className={`opi-glass flex h-full flex-col p-5 ${apagado ? "opacity-70" : ""}`}>
       <header className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-border bg-white/70 text-foreground">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-border bg-surface-hover text-foreground">
             <RedeIcone rede={rede.id} className={`h-6 w-6 ${apagado ? "opacity-75" : ""}`} />
           </span>
           <div className="min-w-0">
@@ -51,12 +51,12 @@ export function RedeCard({ rede }: { rede: RedeView }) {
       ) : (
         <div className="mt-5">
           <p className="opi-label">Sem métricas</p>
-          <p className="opi-num mt-1.5 text-[44px] leading-none text-[#111217]/20">—</p>
+          <p className="opi-num mt-1.5 text-[44px] leading-none text-faint">—</p>
         </div>
       )}
 
       <div className="mt-auto pt-5">
-        <div className="rounded-xl border border-dashed border-[#111217]/15 bg-white/40 px-3 py-2.5 text-xs leading-relaxed text-muted">
+        <div className="rounded-xl border border-dashed border-border bg-surface px-3 py-2.5 text-xs leading-relaxed text-muted">
           {rede.funcoes.join(" · ")}
         </div>
         {/* Cor da tela inteira: o card sem dados fica a 70% de opacidade e text-muted cairia abaixo de 4,5:1. */}

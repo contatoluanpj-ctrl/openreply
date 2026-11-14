@@ -111,16 +111,16 @@ export function PainelAgente({ agente, onFechar, onAtividade }: PainelAgenteProp
 
   return (
     <div className="fixed inset-0 z-[90]" role="presentation">
-      <button type="button" aria-label="Fechar painel" onClick={onFechar} className="absolute inset-0 h-full w-full cursor-default bg-[#111217]/25 backdrop-blur-[2px]" />
+      <button type="button" aria-label="Fechar painel" onClick={onFechar} className="absolute inset-0 h-full w-full cursor-default bg-overlay backdrop-blur-[2px]" />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="painel-agente-titulo"
-        className="absolute inset-y-0 right-0 flex w-full max-w-[26rem] flex-col overflow-hidden border-l border-[#111217]/10 bg-[#f4f6f8] text-[#111217] shadow-[0_30px_80px_-20px_rgba(17,18,23,.45)] sm:inset-y-3 sm:right-3 sm:rounded-[24px] sm:border"
+        className="absolute inset-y-0 right-0 flex w-full max-w-[26rem] flex-col overflow-hidden border-l border-border bg-surface-strong text-foreground shadow-2xl sm:inset-y-3 sm:right-3 sm:rounded-[24px] sm:border"
       >
-        <header className="relative flex items-start gap-3 border-b border-[#111217]/8 p-5">
-          <span aria-hidden className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[#D9541E]/85 to-transparent" />
-          <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#111217] font-display text-sm font-extrabold text-white">
+        <header className="relative flex items-start gap-3 border-b border-border p-5">
+          <span aria-hidden className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-accent-line to-transparent" />
+          <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-foreground font-display text-sm font-extrabold text-background">
             {iniciais(nome)}
           </span>
           <div className="min-w-0 flex-1">
@@ -128,7 +128,7 @@ export function PainelAgente({ agente, onFechar, onAtividade }: PainelAgenteProp
             <p className="text-sm text-muted">{membro?.papel}</p>
             {membro?.status && <p className="mt-1 text-xs text-muted">{STATUS_LABEL[membro.status]}</p>}
           </div>
-          <button type="button" onClick={onFechar} aria-label="Fechar" className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[#111217]/10 bg-white text-muted hover:text-foreground">
+          <button type="button" onClick={onFechar} aria-label="Fechar" className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-surface text-muted hover:text-foreground">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden><path d="M6 6l12 12M18 6 6 18" /></svg>
           </button>
         </header>
@@ -144,15 +144,15 @@ export function PainelAgente({ agente, onFechar, onAtividade }: PainelAgenteProp
           )}
           <ul className="space-y-2">
             {recentes.map((p) => (
-              <li key={p.id} className="rounded-2xl border border-[#111217]/8 bg-white/70 px-3.5 py-3">
+              <li key={p.id} className="rounded-2xl border border-border bg-surface-hover px-3.5 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <p className="line-clamp-3 whitespace-pre-wrap break-words text-sm">{p.mensagem}</p>
                   <Badge tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Badge>
                 </div>
                 <p className="mt-1 text-[11px] text-muted">{quando(p.createdAt)}</p>
                 {p.resposta && (
-                  <details className="mt-2 rounded-xl bg-[#111217]/[.04] px-3 py-2 text-sm">
-                    <summary className="cursor-pointer text-xs font-semibold text-[#D9541E]">Ver resposta</summary>
+                  <details className="mt-2 rounded-xl bg-inset px-3 py-2 text-sm">
+                    <summary className="cursor-pointer text-xs font-semibold text-accent-text">Ver resposta</summary>
                     <p className="mt-2 whitespace-pre-wrap break-words">{p.resposta}</p>
                   </details>
                 )}
@@ -161,7 +161,7 @@ export function PainelAgente({ agente, onFechar, onAtividade }: PainelAgenteProp
           </ul>
         </div>
 
-        <form onSubmit={enviar} className="border-t border-[#111217]/8 p-5">
+        <form onSubmit={enviar} className="border-t border-border p-5">
           <label htmlFor="painel-agente-msg" className="opi-label mb-2">Mandar para {nome}</label>
           <textarea
             id="painel-agente-msg"
@@ -174,14 +174,14 @@ export function PainelAgente({ agente, onFechar, onAtividade }: PainelAgenteProp
             maxLength={4000}
             rows={3}
             placeholder={`O que ${nome} deve fazer?`}
-            className="w-full resize-none border border-[#111217]/12 px-3.5 py-2.5 text-sm placeholder:text-muted focus:border-[#D9541E] focus:outline-none"
+            className="w-full resize-none border border-border px-3.5 py-2.5 text-sm placeholder:text-muted focus:border-accent focus:outline-none"
           />
           <div className="mt-2 flex items-center justify-between gap-3">
             <p className="text-[11px] leading-snug text-muted">Quem responde é o runner no seu PC (confere a cada minuto).</p>
             <button
               type="submit"
               disabled={enviando || !texto.trim()}
-              className="shrink-0 rounded-full bg-[#D9541E] px-5 py-2 text-sm font-semibold text-white shadow-[0_0_18px_rgba(217,84,30,.4)] transition-opacity hover:opacity-90 disabled:opacity-40"
+              className="shrink-0 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
             >
               {enviando ? "Enviando…" : "Enviar"}
             </button>

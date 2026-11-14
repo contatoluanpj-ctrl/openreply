@@ -44,7 +44,7 @@ function TituloSecao({ titulo, nota, href, link }: { titulo: string; nota: strin
         <p className="mt-1 max-w-[70ch] text-[13px] text-muted">{nota}</p>
       </div>
       {href && link && (
-        <Link href={href} className="text-xs font-semibold text-accent hover:underline">
+        <Link href={href} className="text-xs font-semibold text-accent-text hover:underline">
           {link} →
         </Link>
       )}

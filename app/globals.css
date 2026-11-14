@@ -18,6 +18,16 @@
   --color-success: #16a34a;
   --color-error: #dc2626;
   --color-warning: #d97706;
+  /* Tokens do OPI Central (redefinidos em .opi-central). Aqui ficam os valores claros das páginas públicas. */
+  --color-surface-strong: #ffffff;
+  --color-inset: rgba(24, 24, 27, 0.05);
+  --color-track: rgba(24, 24, 27, 0.18);
+  --color-faint: #71717a;
+  --color-accent-soft: rgba(249, 115, 22, 0.12);
+  --color-accent-line: rgba(249, 115, 22, 0.45);
+  --color-accent-text: #c2410c;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-knob: #ffffff;
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, monospace;
 }
@@ -109,27 +119,56 @@ select:focus-visible {
 }
 .zernio-sponsor { font-family: 'Zernio Geist', sans-serif; }
 
-/* OPI Central — mesmo visual do Painel OPI (artefato): vidro, auras, cantos grandes, pílulas,
-   Manrope/Inter. Paleta do Luan (08/11): base clara #DFE5EB, escuro #111217, detalhe #D9541E.
-   Vale só dentro do shell; o site público não muda. */
+/* OPI Central — tema escuro (etapa 2, 14/11/2026). Tudo por token: os componentes não levam cor fixa.
+   Duas variantes no contêiner .opi-central:
+     data-tema="a" (padrão) = preto neutro com vidro;  data-tema="b" = grafite azulado, mais suave.
+   Laranja #D9541E só em ação e destaque. Contraste AA medido (pares em docs/opi/tema-escuro.md).
+   Vale dentro do shell e no /login; as páginas públicas herdadas não mudam. */
 .opi-central {
-  color-scheme: light;
-  --opi-base: #DFE5EB;
-  --opi-ink: #111217;
+  color-scheme: dark;
   --opi-acc: #D9541E;
-  --color-background: #DFE5EB;
-  --color-surface: rgba(255, 255, 255, 0.55);
-  --color-surface-hover: rgba(255, 255, 255, 0.85);
-  --color-border: rgba(17, 18, 23, 0.09);
-  --color-border-hover: rgba(17, 18, 23, 0.18);
-  --color-foreground: #111217;
-  --color-muted: rgba(17, 18, 23, 0.58);
+  --color-background: #09090B;
+  --color-surface: rgba(255, 255, 255, 0.05);
+  --color-surface-hover: rgba(255, 255, 255, 0.09);
+  --color-surface-strong: #141417;
+  --color-border: rgba(255, 255, 255, 0.10);
+  --color-border-hover: rgba(255, 255, 255, 0.22);
+  --color-foreground: #F4F4F5;
+  --color-muted: #A1A1AA;
+  --color-faint: #8B8B94;
   --color-accent: #D9541E;
-  --color-accent-hover: #c2491a;
-  --color-accent-foreground: #ffffff;
-  --color-success: #D9541E;
-  --color-error: #c0262d;
-  --color-warning: rgba(17, 18, 23, 0.58);
+  --color-accent-hover: #E86A36;
+  /* Texto escuro no botão laranja: 4,90:1 (branco dava 4,01:1). */
+  --color-accent-foreground: #0B0B0D;
+  --color-accent-text: #F0865A;
+  --color-accent-soft: rgba(217, 84, 30, 0.16);
+  --color-accent-line: rgba(217, 84, 30, 0.5);
+  --color-success: #5CCB8B;
+  --color-error: #F87171;
+  --color-warning: #E5B454;
+  --color-inset: rgba(255, 255, 255, 0.04);
+  --color-track: rgba(255, 255, 255, 0.16);
+  --color-overlay: rgba(0, 0, 0, 0.66);
+  --color-knob: #F4F4F5;
+  --opi-glass-bg: rgba(255, 255, 255, 0.045);
+  --opi-glass-border: rgba(255, 255, 255, 0.09);
+  --opi-glass-sheen: rgba(255, 255, 255, 0.10);
+  --opi-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.9);
+  --opi-field: rgba(255, 255, 255, 0.06);
+  --opi-aura-1: rgba(217, 84, 30, 0.11);
+  --opi-aura-2: rgba(255, 255, 255, 0.05);
+  --opi-aura-3: rgba(217, 84, 30, 0.07);
+  /* Gráficos: laranja para o destaque, cinzas claros para o resto (nada branco puro nem preto). */
+  --opi-chart-1: #D9541E;
+  --opi-chart-2: #E4E4E7;
+  --opi-chart-3: #8B8B94;
+  --opi-chart-4: #F2A27E;
+  --opi-chart-5: #5F5F68;
+  --opi-chart-6: #9A4525;
+  --opi-chart-7: #3A3A41;
+  --opi-chart-grid: rgba(255, 255, 255, 0.08);
+  --opi-chart-axis: #A1A1AA;
+  --opi-chart-cursor: rgba(255, 255, 255, 0.06);
   --font-sans: Inter, "Segoe UI", system-ui, sans-serif;
   --font-display: Manrope, Inter, "Segoe UI", sans-serif;
   --radius-xs: 8px;
@@ -138,7 +177,6 @@ select:focus-visible {
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-2xl: 24px;
-  --opi-inset: rgba(17, 18, 23, 0.045);
   position: relative;
   background: var(--color-background);
   color: var(--color-foreground);
@@ -146,71 +184,110 @@ select:focus-visible {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Auras do artefato, na cor de detalhe. */
+/* Variante B: grafite azulado, menos contraste entre fundo e cartão. */
+.opi-central[data-tema="b"] {
+  --color-background: #11141B;
+  --color-surface: rgba(160, 176, 214, 0.08);
+  --color-surface-hover: rgba(160, 176, 214, 0.14);
+  --color-surface-strong: #1B202B;
+  --color-border: rgba(170, 186, 224, 0.14);
+  --color-border-hover: rgba(170, 186, 224, 0.28);
+  --color-foreground: #E9ECF3;
+  --color-muted: #A9B1C3;
+  --color-faint: #939CB0;
+  --color-accent-text: #F29068;
+  --color-accent-soft: rgba(217, 84, 30, 0.18);
+  --color-success: #6FCF97;
+  --color-error: #F58B8B;
+  --color-warning: #E8BD6A;
+  --color-inset: rgba(160, 176, 214, 0.06);
+  --color-track: rgba(170, 186, 224, 0.22);
+  --color-overlay: rgba(6, 8, 12, 0.7);
+  --color-knob: #E9ECF3;
+  --opi-glass-bg: rgba(160, 176, 214, 0.075);
+  --opi-glass-border: rgba(170, 186, 224, 0.13);
+  --opi-glass-sheen: rgba(190, 204, 236, 0.14);
+  --opi-shadow: 0 24px 60px -32px rgba(3, 5, 10, 0.8);
+  --opi-field: rgba(160, 176, 214, 0.09);
+  --opi-aura-1: rgba(92, 118, 190, 0.20);
+  --opi-aura-2: rgba(217, 84, 30, 0.09);
+  --opi-aura-3: rgba(92, 118, 190, 0.12);
+  --opi-chart-2: #DDE2EE;
+  --opi-chart-3: #939CB0;
+  --opi-chart-5: #5E6880;
+  --opi-chart-7: #3A4254;
+  --opi-chart-grid: rgba(170, 186, 224, 0.11);
+  --opi-chart-axis: #A9B1C3;
+  --opi-chart-cursor: rgba(170, 186, 224, 0.08);
+}
+
+/* O corpo acompanha o painel: sem faixa branca na área segura do celular nem no puxão da rolagem. */
+html:has(.opi-central) { color-scheme: dark; }
+body:has(.opi-central) { background: #09090B; color: #F4F4F5; }
+body:has(.opi-central[data-tema="b"]) { background: #11141B; color: #E9ECF3; }
+
+/* Auras: brilho discreto atrás do vidro. */
 .opi-aura { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
-.opi-aura i { position: absolute; border-radius: 50%; background: #D9541E; }
-.opi-aura i:nth-child(1) { left: -220px; top: -180px; width: 560px; height: 560px; opacity: .16; filter: blur(150px); }
-.opi-aura i:nth-child(2) { right: -160px; top: 280px; width: 620px; height: 420px; opacity: .10; filter: blur(170px); }
-.opi-aura i:nth-child(3) { left: 25%; bottom: -280px; width: 900px; height: 520px; opacity: .14; filter: blur(190px); }
+.opi-aura i { position: absolute; border-radius: 50%; }
+.opi-aura i:nth-child(1) { left: -220px; top: -220px; width: 560px; height: 560px; background: var(--opi-aura-1); filter: blur(150px); }
+.opi-aura i:nth-child(2) { right: -160px; top: 280px; width: 620px; height: 420px; background: var(--opi-aura-2); filter: blur(170px); }
+.opi-aura i:nth-child(3) { left: 25%; bottom: -320px; width: 900px; height: 520px; background: var(--opi-aura-3); filter: blur(190px); }
 
 .opi-central h1, .opi-central h2, .opi-central h3, .opi-central h4,
 .opi-central .font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
 
 .opi-central .bg-surface { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
 .opi-central .rounded { border-radius: var(--radius-sm); }
+.opi-central .panel { background: var(--opi-glass-bg); border-color: var(--opi-glass-border); border-radius: var(--radius-xl); }
 
-/* Cartão de vidro (opi-glass do artefato): brilho laranja no canto e linha no topo. */
+/* Cartão de vidro: borda fina e uma linha de brilho no topo. Sem mancha laranja (laranja é só ação e destaque). */
 .opi-glass {
-  /* clip: o brilho do ::before passa da borda; com hidden o cartão ainda rolava para o lado por foco/scrollIntoView. */
+  /* clip: com hidden o cartão ainda rolava para o lado por foco/scrollIntoView. */
   position: relative; overflow: hidden; overflow: clip; border-radius: 24px;
-  background: rgba(255, 255, 255, 0.55); border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 24px 60px -30px rgba(17, 18, 23, .28), inset 0 1px 0 rgba(255, 255, 255, .9);
+  background: var(--opi-glass-bg); border: 1px solid var(--opi-glass-border);
+  box-shadow: var(--opi-shadow), inset 0 1px 0 var(--opi-glass-sheen);
   backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
 }
-.opi-glass::before { content: ""; position: absolute; top: -110px; right: -12%; width: 70%; height: 220px; border-radius: 50%; background: #D9541E; opacity: .14; filter: blur(64px); pointer-events: none; }
-.opi-glass::after { content: ""; position: absolute; top: 0; left: 24px; right: 24px; height: 1px; background: linear-gradient(90deg, transparent, rgba(217, 84, 30, .85), transparent); pointer-events: none; }
+.opi-glass::after { content: ""; position: absolute; top: 0; left: 24px; right: 24px; height: 1px; background: linear-gradient(90deg, transparent, var(--opi-glass-sheen), transparent); pointer-events: none; }
 .opi-glass > * { position: relative; }
-.opi-glass.muted { background: rgba(255, 255, 255, 0.32); box-shadow: none; }
-.opi-glass.muted::before, .opi-glass.muted::after { display: none; }
+.opi-glass.muted { background: var(--color-inset); box-shadow: none; }
+.opi-glass.muted::after { display: none; }
 .opi-tile {
-  border-radius: 16px; padding: 14px 18px; background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 12px 32px -24px rgba(17, 18, 23, .3);
+  border-radius: 16px; padding: 14px 18px; background: var(--opi-glass-bg);
+  border: 1px solid var(--opi-glass-border); box-shadow: inset 0 1px 0 var(--opi-glass-sheen);
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
 }
-.opi-label { display: flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: rgba(17, 18, 23, .5); font-weight: 600; }
-.opi-label svg { width: 13px; height: 13px; color: #D9541E; flex: none; }
-.opi-num { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #111217; }
-.opi-inset { border-radius: 16px; background: var(--opi-inset); border: 1px solid rgba(17, 18, 23, 0.06); }
+.opi-label { display: flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-faint); font-weight: 600; }
+.opi-label svg { width: 13px; height: 13px; color: var(--color-accent); flex: none; }
+.opi-num { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--color-foreground); }
+.opi-inset { border-radius: 16px; background: var(--color-inset); border: 1px solid var(--color-border); }
 .opi-delta { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.opi-delta.up { background: rgba(217, 84, 30, .14); color: #D9541E; }
-.opi-delta.down { background: rgba(17, 18, 23, .06); color: rgba(17, 18, 23, .6); }
-.opi-seg { display: inline-flex; padding: 4px; border-radius: 999px; background: rgba(17, 18, 23, .05); border: 1px solid rgba(17, 18, 23, .08); }
-.opi-seg button { border: 0; background: transparent; color: rgba(17, 18, 23, .6); font: 600 12px var(--font-sans); padding: 5px 12px; border-radius: 999px; cursor: pointer; }
-.opi-seg button[aria-pressed="true"] { background: #D9541E; color: #fff; box-shadow: 0 0 18px rgba(217, 84, 30, .45); }
-.opi-tip { border-radius: 12px; padding: 8px 12px; font-size: 12px; background: rgba(17, 18, 23, .92); color: #fff; border: 0; box-shadow: 0 12px 30px -12px rgba(17, 18, 23, .5); }
+.opi-delta.up { background: var(--color-accent-soft); color: var(--color-accent-text); }
+.opi-delta.down { background: var(--color-inset); color: var(--color-muted); }
+.opi-seg { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--color-inset); border: 1px solid var(--color-border); }
+.opi-seg button { border: 0; background: transparent; color: var(--color-muted); font: 600 12px var(--font-sans); padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+.opi-seg button[aria-pressed="true"] { background: var(--color-accent); color: var(--color-accent-foreground); }
+.opi-tip { border-radius: 12px; padding: 8px 12px; font-size: 12px; background: var(--color-surface-strong); color: var(--color-foreground); border: 1px solid var(--color-border-hover); box-shadow: 0 12px 30px -12px rgba(0, 0, 0, .8); }
 
-/* Botões e campos em pílula, como os controles do artefato. */
+/* Botões e campos em pílula. */
 .opi-central button[class*="rounded"]:not([class*="rounded-full"]):not([class*="p-4"]):not([class*="p-5"]):not([class*="p-6"]),
 .opi-central a[class*="bg-accent"],
 .opi-central a[class*="border"][class*="py-1"],
 .opi-central a[class*="border"][class*="py-2"] { border-radius: 999px; }
 .opi-central select, .opi-central input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) { border-radius: 12px; }
 .opi-central textarea { border-radius: 14px; }
-.opi-central input, .opi-central select, .opi-central textarea { background-color: rgba(255, 255, 255, .7); }
-.opi-central .bg-accent { box-shadow: 0 0 18px rgba(217, 84, 30, .35); }
-.opi-central th { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: rgba(17, 18, 23, .5); font-weight: 600; }
+.opi-central input, .opi-central select, .opi-central textarea { background-color: var(--opi-field); color: var(--color-foreground); }
+.opi-central select option { background: var(--color-surface-strong); color: var(--color-foreground); }
+.opi-central ::placeholder { color: var(--color-faint); opacity: 1; }
+.opi-central input[type="checkbox"], .opi-central input[type="radio"], .opi-central input[type="range"] { accent-color: var(--color-accent); }
+.opi-central th { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-faint); font-weight: 600; }
 
-/* Confirmação dentro da página (lib/opi/confirmar.ts). */
-.opi-confirm { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: rgba(17, 18, 23, .35); backdrop-filter: blur(4px); padding: 16px; }
-.opi-confirm-box { width: min(100%, 26rem); border-radius: 24px; padding: 22px; background: #f4f6f8; color: #111217; box-shadow: 0 30px 80px -20px rgba(17, 18, 23, .45); font: 14px/1.5 var(--font-sans); }
+/* Confirmação dentro da página (lib/opi/confirmar.ts). Fica no body, fora do contêiner: cores próprias, iguais às do tema A. */
+.opi-confirm { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: rgba(0, 0, 0, .66); backdrop-filter: blur(4px); padding: 16px; }
+.opi-confirm-box { width: min(100%, 26rem); border-radius: 24px; padding: 22px; background: #17171A; color: #F4F4F5; border: 1px solid rgba(255, 255, 255, .12); box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .9); font: 14px/1.5 Inter, "Segoe UI", system-ui, sans-serif; }
 .opi-confirm-acoes { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
-.opi-confirm-acoes button { border-radius: 999px; padding: 9px 16px; font: 600 13px var(--font-sans); cursor: pointer; border: 1px solid rgba(17, 18, 23, .12); background: #fff; color: #111217; }
-.opi-confirm-acoes .opi-confirm-ok { background: #D9541E; border-color: #D9541E; color: #fff; }
-
-/* Interruptores claros. */
-.opi-central .bg-accent > .bg-white { background-color: #ffffff; }
-.opi-central .text-zinc-600, .opi-central .text-zinc-700 { color: var(--color-muted); }
-.opi-central .text-zinc-900 { color: var(--color-foreground); }
+.opi-confirm-acoes button { border-radius: 999px; padding: 9px 16px; font: 600 13px Inter, "Segoe UI", system-ui, sans-serif; cursor: pointer; border: 1px solid rgba(255, 255, 255, .18); background: transparent; color: #F4F4F5; }
+.opi-confirm-acoes .opi-confirm-ok { background: #D9541E; border-color: #D9541E; color: #0B0B0D; }
 
 /* Bloco do Zernio nas Configurações: neutro dentro do painel. */
 .opi-central .zernio-sponsor { background: var(--color-surface); color: var(--color-foreground); border-color: var(--color-border); }
@@ -220,4 +297,4 @@ select:focus-visible {
 /* Barras de rolagem discretas. */
 .opi-central nav { scrollbar-width: none; }
 .opi-central nav::-webkit-scrollbar { display: none; }
-.opi-central main { scrollbar-width: thin; scrollbar-color: rgba(17, 18, 23, .18) transparent; }
+.opi-central main { scrollbar-width: thin; scrollbar-color: var(--color-track) transparent; }

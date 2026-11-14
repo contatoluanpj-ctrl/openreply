@@ -3,14 +3,10 @@
 // Peças dos gráficos do Financeiro que não dependem do recharts (cores, rótulos, cabeçalho, legenda,
 // estado vazio). Ficam fora de graficos.tsx para o painel carregar o recharts só quando desenha.
 import type { ReactNode } from "react";
+import { COR_GRAFICO } from "@/lib/opi/cores-grafico";
 
-export const COR = {
-  principal: "#D9541E",
-  secundaria: "#111217",
-  terciaria: "rgba(17,18,23,.35)",
-  grade: "rgba(17,18,23,.08)",
-  eixo: "rgba(17,18,23,.5)",
-};
+// Cores só por variável do tema (lib/opi/cores-grafico.ts).
+export const COR = COR_GRAFICO;
 
 const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
@@ -36,7 +32,7 @@ export function CabecalhoGrafico({ titulo, olhar, controle }: { titulo: string; 
 export function Vazio({ titulo, texto, altura = 240 }: { titulo: string; texto: string; altura?: number }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 text-center" style={{ minHeight: altura }}>
-      <svg viewBox="0 0 24 24" className="h-7 w-7 text-accent" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+      <svg viewBox="0 0 24 24" className="h-7 w-7 text-accent-text" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
         <path d="M3 3v18h18" strokeLinecap="round" />
         <path d="M7 15l4-4 3 3 5-6" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="3 3" />
       </svg>

@@ -112,7 +112,7 @@ export default function LogsPage() {
                 px-3 py-1.5 rounded-lg text-xs font-medium transition-all
                 ${
                   statusFilter === status
-                    ? "bg-accent/15 text-accent border border-accent/20"
+                    ? "bg-accent/15 text-accent-text border border-accent/20"
                     : "bg-surface text-muted border border-border hover:border-border-hover hover:text-foreground"
                 }
               `}

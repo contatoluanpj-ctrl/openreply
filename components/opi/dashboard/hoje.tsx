@@ -26,7 +26,7 @@ function LinhaPost({ p }: { p: PostDeHoje }) {
   const ativas = p.campanhas.filter((c) => c.ativa).length;
   return (
     <li>
-      <Link href={LINKS.calendario} className="opi-inset block px-3 py-2.5 transition-colors hover:bg-white/70">
+      <Link href={LINKS.calendario} className="opi-inset block px-3 py-2.5 transition-colors hover:bg-surface-hover">
         <span className="flex flex-wrap items-center gap-2">
           <span className="opi-num text-base leading-none">{fmtHora.format(p.agendadoPara)}</span>
           <span className="text-xs font-semibold text-muted">{rotuloTipoPost(p.tipo)}</span>
@@ -51,12 +51,12 @@ function Itens({ itens }: { itens: ItemHoje[] }) {
     <ul className="grid gap-2">
       {itens.map((i, n) => (
         <li key={`${i.href}-${n}`}>
-          <Link href={i.href} className="opi-inset flex items-start justify-between gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-white/70">
+          <Link href={i.href} className="opi-inset flex items-start justify-between gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-surface-hover">
             <span className="flex min-w-0 items-start gap-2 text-foreground">
               <span aria-hidden className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${i.nivel === "erro" ? "bg-error" : "bg-muted"}`} />
               <span className="min-w-0 break-words">{i.texto}</span>
             </span>
-            <span className="shrink-0 text-xs font-semibold text-accent">Abrir →</span>
+            <span className="shrink-0 text-xs font-semibold text-accent-text">Abrir →</span>
           </Link>
         </li>
       ))}
@@ -74,7 +74,7 @@ export function BlocoHoje({ hoje }: { hoje: Hoje }) {
               posts.length === 0 ? (
                 <Vazio>
                   Nada agendado para hoje.{" "}
-                  <Link href={LINKS.calendario} className="font-semibold text-accent hover:underline">
+                  <Link href={LINKS.calendario} className="font-semibold text-accent-text hover:underline">
                     Abrir o calendário →
                   </Link>
                 </Vazio>

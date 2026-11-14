@@ -19,7 +19,7 @@ const pageTitles: Record<string, string> = {
   "/logs": "Registro de DMs",
   "/settings": "Configurações",
   "/diagnostics": "Diagnóstico",
-  "/integrations": "API e MCP",
+  "/integrations": "Integrações",
 };
 
 interface TopBarProps {
@@ -42,7 +42,7 @@ export default function TopBar({
 
   return (
     <header
-      className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 lg:px-10 bg-[#DFE5EB]/60 backdrop-blur-xl"
+      className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 lg:px-10 bg-background/70 backdrop-blur-xl"
       // Installed to the home screen the app starts at the very top of the
       // display, so without this the title sits under the clock and battery.
       // The inset is 0 in a browser tab and on desktop.
@@ -54,9 +54,12 @@ export default function TopBar({
       <div className="flex min-w-0 items-center gap-3 sm:gap-4">
         <button
           onClick={onMenuClick}
-          className="lg:hidden shrink-0 px-2.5 py-1.5 rounded border border-border text-sm text-muted hover:text-foreground"
+          className="lg:hidden inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-border bg-surface px-3.5 text-sm font-semibold text-foreground hover:bg-surface-hover"
           aria-label={t("Toggle sidebar")}
         >
+          <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" aria-hidden>
+            <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" />
+          </svg>
           {t("Menu")}
         </button>
         {title && (
@@ -65,7 +68,7 @@ export default function TopBar({
       </div>
 
       {instagramAccountCount > 0 ? (
-        <p className="ml-auto shrink-0 truncate rounded-full border border-[#111217]/10 bg-white/60 px-3.5 py-1.5 text-xs font-semibold text-[#111217]/70">
+        <p className="ml-auto shrink-0 truncate rounded-full border border-border bg-surface px-3.5 py-1.5 text-xs font-semibold text-muted">
           {instagramAccountCount > 1
             ? t("{count} accounts", { count: instagramAccountCount })
             : `@${instagramUsername}`}
@@ -73,7 +76,7 @@ export default function TopBar({
       ) : (
         <a
           href="/api/instagram/connect"
-          className="shrink-0 whitespace-nowrap text-sm font-medium px-3 py-1.5 rounded bg-accent text-white hover:bg-accent-hover"
+          className="shrink-0 whitespace-nowrap text-sm font-medium px-3 py-1.5 rounded bg-accent text-accent-foreground hover:bg-accent-hover"
         >
           {/* Full label needs more room than a 360px header has to spare. */}
           <span className="sm:hidden">{t("Connect")}</span>

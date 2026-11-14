@@ -187,7 +187,7 @@ export default function CampaignDetailPage() {
             className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${
               campaign.isActive
                 ? "bg-success/10 text-success"
-                : "bg-zinc-500/10 text-muted"
+                : "bg-inset text-muted"
             }`}
           >
             {campaign.isActive ? t("LIVE") : t("Paused")}

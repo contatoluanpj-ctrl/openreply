@@ -338,7 +338,7 @@ export default function CampaignsPage() {
           </Link>
           <Link
             href="/campaigns/new"
-            className="flex-1 rounded bg-accent px-4 py-2 text-center text-sm font-medium text-white hover:bg-accent-hover sm:flex-none"
+            className="flex-1 rounded bg-accent px-4 py-2 text-center text-sm font-medium text-accent-foreground hover:bg-accent-hover sm:flex-none"
           >
             {t("New Campaign")}
           </Link>
@@ -352,7 +352,7 @@ export default function CampaignsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("Search campaigns by name, keyword, or message…")}
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-zinc-500 focus:border-accent/40 focus:outline-none"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-faint focus:border-accent/40 focus:outline-none"
           />
           <div className="opi-seg shrink-0" role="group" aria-label="Filtrar por estado">
             {(["all", "active", "paused"] as const).map((s) => (
@@ -379,7 +379,7 @@ export default function CampaignsPage() {
           </p>
           <Link
             href="/campaigns/new"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded bg-accent text-sm font-semibold text-white hover:bg-accent-hover transition-colors"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded bg-accent text-sm font-semibold text-accent-foreground hover:bg-accent-hover transition-colors"
           >
             {t("Create Campaign")}
           </Link>
@@ -460,12 +460,12 @@ export default function CampaignsPage() {
                     </span>
                   )}
                   {auto.requireFollow && (
-                    <span className="shrink-0 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                    <span className="shrink-0 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent-text">
                       {t("Follow gate")}
                     </span>
                   )}
                   {auto.trackedLinks.length >= 2 && (
-                    <span className="shrink-0 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                    <span className="shrink-0 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent-text">
                       {t("2 links")}
                     </span>
                   )}
@@ -476,7 +476,7 @@ export default function CampaignsPage() {
                   {auto.keywords.map((kw) => (
                     <span
                       key={kw}
-                      className="rounded-full bg-[#D9541E]/10 px-2.5 py-0.5 text-xs font-semibold text-[#D9541E]"
+                      className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent-text"
                     >
                       {kw}
                     </span>
@@ -488,13 +488,13 @@ export default function CampaignsPage() {
 
                 {/* Tracked link sent */}
                 {auto.trackedLinks[0]?.trackedUrl && (
-                  <p className="mt-2 truncate font-mono text-xs text-zinc-500">
+                  <p className="mt-2 truncate font-mono text-xs text-faint">
                     {auto.trackedLinks[0].trackedUrl}
                   </p>
                 )}
 
                 {/* Stats */}
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-zinc-500">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-faint">
                   <span className="font-medium text-foreground">
                     {auto._count.dmLogs} {t("runs")}
                   </span>
@@ -545,12 +545,12 @@ export default function CampaignsPage() {
                   onClick={() => toggleActive(auto.id, auto.isActive)}
                   className={`
                     relative w-11 h-6 rounded-full transition-colors
-                    ${auto.isActive ? "bg-accent" : "bg-zinc-300"}
+                    ${auto.isActive ? "bg-accent" : "bg-track"}
                   `}
                 >
                   <span
                     className={`
-                      absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow-sm
+                      absolute top-1 w-4 h-4 rounded-full bg-knob transition-transform shadow-sm
                       ${auto.isActive ? "left-6" : "left-1"}
                     `}
                   />
@@ -603,7 +603,7 @@ export default function CampaignsPage() {
       {/* Reel lightbox */}
       {playingVideo && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
           onClick={() => setPlayingVideo(null)}
         >
           <div
@@ -616,7 +616,7 @@ export default function CampaignsPage() {
                   href={playingVideo.postUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-zinc-300 hover:text-white"
+                  className="text-muted hover:text-foreground"
                 >
                   {t("Open on Instagram")}
                 </a>
@@ -624,7 +624,7 @@ export default function CampaignsPage() {
               <button
                 type="button"
                 onClick={() => setPlayingVideo(null)}
-                className="text-zinc-300 hover:text-white"
+                className="text-muted hover:text-foreground"
               >
                 {t("Close")}
               </button>

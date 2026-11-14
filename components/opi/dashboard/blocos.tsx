@@ -59,7 +59,7 @@ function Estado({ estado }: { estado: string }) {
   return (
     <span
       className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${
-        ok ? "border-[rgba(217,84,30,.45)] bg-[rgba(217,84,30,.1)] text-accent" : "border-border bg-white/40 text-muted"
+        ok ? "border-accent-line bg-accent-soft text-accent-text" : "border-border bg-surface text-muted"
       }`}
     >
       {ok && <span className="h-[7px] w-[7px] animate-pulse rounded-full bg-accent motion-reduce:animate-none" aria-hidden />}
@@ -73,7 +73,7 @@ export function Plataforma({ card }: { card: CardPlataforma }) {
     <article className="opi-glass flex w-full flex-col p-5 sm:w-[min(100%,24rem)]">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-11 w-11 flex-none place-items-center rounded-2xl border border-[rgba(17,18,23,.06)] bg-white/70">
+          <span className="grid h-11 w-11 flex-none place-items-center rounded-2xl border border-border bg-surface-hover">
             <RedeIcone rede={card.rede} className="h-6 w-6" />
           </span>
           <div className="min-w-0">
@@ -92,7 +92,7 @@ export function Plataforma({ card }: { card: CardPlataforma }) {
           {card.destaque.rotulo}
         </p>
         <div className="mt-1.5 flex items-end gap-2.5">
-          <span className="opi-num text-[44px] leading-none [text-shadow:0_0_32px_rgba(217,84,30,.25)]">
+          <span className="opi-num text-[44px] leading-none">
             {valorFormatado(card.destaque.valor, card.destaque.formato)}
           </span>
           <span className="pb-1">
@@ -137,14 +137,14 @@ export function Pendencias({ itens }: { itens: Pendencia[] }) {
         <li key={`${p.href}-${i}`}>
           <Link
             href={p.href}
-            className="opi-tile grid grid-cols-1 items-center gap-1.5 transition-colors hover:bg-white/80 sm:grid-cols-[7rem_1fr_auto] sm:gap-3"
+            className="opi-tile grid grid-cols-1 items-center gap-1.5 transition-colors hover:bg-surface-hover sm:grid-cols-[7rem_1fr_auto] sm:gap-3"
           >
             <span className="text-[11px] uppercase tracking-[.08em] text-muted">{areaDaPendencia(p.href)}</span>
             <span className="flex min-w-0 items-center gap-2 text-sm text-foreground">
               <span className={`h-2 w-2 shrink-0 rounded-full ${p.nivel === "erro" ? "bg-error" : "bg-muted"}`} aria-hidden />
               <span>{p.texto}</span>
             </span>
-            <span className="text-xs font-semibold text-accent">Abrir →</span>
+            <span className="text-xs font-semibold text-accent-text">Abrir →</span>
           </Link>
         </li>
       ))}

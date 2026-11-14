@@ -44,7 +44,7 @@ function nomeMes(mes: string) {
 }
 
 const botaoNav =
-  "rounded-full border border-border bg-white/40 px-2.5 py-1 text-sm text-foreground hover:bg-surface-hover";
+  "rounded-full border border-border bg-surface px-2.5 py-1 text-sm text-foreground hover:bg-surface-hover";
 
 export function CalendarioMes() {
   const [mes, setMes] = useState(() => mesAtual());
@@ -216,12 +216,12 @@ export function CalendarioMes() {
         </div>
 
         {erro && <p className="mb-3 text-sm text-error">{erro}</p>}
-        {mensagem && <p className="mb-3 text-sm text-accent">{mensagem}</p>}
+        {mensagem && <p className="mb-3 text-sm text-accent-text">{mensagem}</p>}
 
         {visao === "mes" ? (
           <div className="grid grid-cols-7 gap-px overflow-hidden rounded-2xl border border-border bg-border">
             {DIAS_SEMANA.map((d, i) => (
-              <div key={d} className="bg-[#eef1f4] px-1 py-1.5 text-center text-[11px] font-semibold text-muted">
+              <div key={d} className="bg-surface-strong px-1 py-1.5 text-center text-[11px] font-semibold text-muted">
                 <span className="sm:hidden">{DIAS_SEMANA_CURTO[i]}</span>
                 <span className="hidden sm:inline">{d}</span>
               </div>
@@ -232,7 +232,7 @@ export function CalendarioMes() {
               return (
                 <div
                   key={dia ?? `vazio-${i}`}
-                  className={`group min-h-16 min-w-0 p-1 sm:min-h-24 sm:p-1.5 ${dia ? "bg-[#f4f6f8]" : "bg-[#e9edf1]"}`}
+                  className={`group min-h-16 min-w-0 p-1 sm:min-h-24 sm:p-1.5 ${dia ? "bg-surface-strong" : "bg-background"}`}
                 >
                   {dia && (
                     <>
@@ -367,7 +367,7 @@ function ListaPosts({
               return (
                 <li
                   key={p.id}
-                  className={`overflow-hidden rounded-2xl border bg-white/45 ${
+                  className={`overflow-hidden rounded-2xl border bg-surface ${
                     semAvisoPost || pend ? "border-error/50" : "border-border"
                   }`}
                 >
