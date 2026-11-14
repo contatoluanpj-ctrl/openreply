@@ -1,5 +1,6 @@
 import { temAviso } from "@/lib/opi/aviso";
 import { COMPOSIO_NAO_CONFIGURADO, composioConfig, executarFerramenta } from "@/lib/opi/publicadores/composio";
+import { urnDoLinkedin } from "@/lib/opi/redes-teste";
 import {
   PublicadorErro,
   aguardando,
@@ -12,7 +13,8 @@ import {
  * LinkedIn pelo Composio, ferramenta LINKEDIN_CREATE_LINKED_IN_POST (obrigatórios: author, commentary).
  * ESQUELETO: publica só texto. O publicador automático não cria este destino; ele só sai quando foi
  * criado à mão e aprovado (PostDestino.aprovadoEm). O texto é o do próprio destino (descricao), nunca a
- * legenda do Reel. O autor (urn:li:person:... ou urn:li:organization:...) vem de OPI_LINKEDIN_AUTOR_URN.
+ * legenda do Reel. O autor (urn:li:person:... ou urn:li:organization:...) vem de OPI_LINKEDIN_AUTOR_URN ou,
+ * sem ela, do perfil conectado (LINKEDIN_GET_MY_INFO).
  */
 export const LINKEDIN_FERRAMENTA = "LINKEDIN_CREATE_LINKED_IN_POST";
 export const LINKEDIN_TEXTO_MAX = 3000;
@@ -30,12 +32,25 @@ export async function publicarLinkedin(
   const cfg = composioConfig(env);
   if (!cfg) return aguardando(COMPOSIO_NAO_CONFIGURADO);
 
-  const autor = (env.OPI_LINKEDIN_AUTOR_URN ?? "").trim();
-  if (!URN.test(autor)) throw new PublicadorErro("OPI_LINKEDIN_AUTOR_URN ausente ou inválido");
   const texto = (destino.descricao ?? "").trim();
   if (!texto) throw new PublicadorErro("LinkedIn sem texto próprio no destino");
   if (texto.length > LINKEDIN_TEXTO_MAX) throw new PublicadorErro(`Texto do LinkedIn passa de ${LINKEDIN_TEXTO_MAX} caracteres`);
   if (!temAviso(texto)) throw new PublicadorErro("Texto do LinkedIn sem o aviso obrigatório. Nada foi publicado.");
+
+  // Autor: OPI_LINKEDIN_AUTOR_URN quando existe; senão o próprio perfil conectado (leitura, nada é publicado aqui).
+  let autor = (env.OPI_LINKEDIN_AUTOR_URN ?? "").trim();
+  if (!autor) {
+    let perfil: Record<string, unknown>;
+    try {
+      perfil = await executarFerramenta(cfg, "LINKEDIN_GET_MY_INFO", {}, { fetch: ctx.fetch, contaId: cfg.contas.linkedin });
+    } catch (e) {
+      throw new PublicadorErro(`Não foi possível ler o perfil do LinkedIn: ${e instanceof Error ? e.message : "erro"}`.slice(0, 300), {
+        repetivel: true,
+      });
+    }
+    autor = urnDoLinkedin(perfil) ?? "";
+  }
+  if (!URN.test(autor)) throw new PublicadorErro("Autor do LinkedIn ausente ou inválido (OPI_LINKEDIN_AUTOR_URN)");
 
   const dados = await executarFerramenta(
     cfg,

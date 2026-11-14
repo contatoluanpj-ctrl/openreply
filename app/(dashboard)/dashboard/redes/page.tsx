@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Badge, Card, PageHeader } from "@/components/opi";
 import { RedeCard } from "@/components/opi/redes/rede-card";
+import { TestesRedes } from "@/components/opi/redes/testes-redes";
 import type { RedeView } from "@/lib/opi/redes";
 
 type Estado = { status: "carregando" } | { status: "erro"; mensagem: string } | { status: "ok"; redes: RedeView[] };
@@ -10,21 +11,25 @@ type Estado = { status: "carregando" } | { status: "erro"; mensagem: string } | 
 export default function RedesPage() {
   const [estado, setEstado] = useState<Estado>({ status: "carregando" });
 
-  useEffect(() => {
-    let ativo = true;
+  const carregar = useCallback((ativo: () => boolean = () => true) => {
     fetch("/api/opi/redes", { cache: "no-store" })
       .then(async (res) => {
         if (!res.ok) throw new Error(res.status === 401 ? "Sessão expirada. Entre de novo." : "Não foi possível carregar as redes.");
         const body = (await res.json()) as { data: RedeView[] };
-        if (ativo) setEstado({ status: "ok", redes: body.data });
+        if (ativo()) setEstado({ status: "ok", redes: body.data });
       })
       .catch((e: unknown) => {
-        if (ativo) setEstado({ status: "erro", mensagem: e instanceof Error ? e.message : "Erro inesperado." });
+        if (ativo()) setEstado({ status: "erro", mensagem: e instanceof Error ? e.message : "Erro inesperado." });
       });
+  }, []);
+
+  useEffect(() => {
+    let ativo = true;
+    carregar(() => ativo);
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [carregar]);
 
   const conectadas = estado.status === "ok" ? estado.redes.filter((r) => r.estado === "conectado").length : null;
 
@@ -32,9 +37,10 @@ export default function RedesPage() {
     <div>
       <PageHeader
         title="Redes"
-        description="Métricas do último envio de cada rede. Os agentes gravam os dados com chave de serviço (escopo redes:write). Anúncios são só leitura: nenhum gasto sai do painel."
+        description="Conexão testada de verdade e números de cada rede. Anúncios são só leitura: nenhum gasto sai do painel."
         actions={conectadas !== null ? <Badge>{conectadas} de 9 conectadas</Badge> : undefined}
       />
+      <TestesRedes aoTestar={() => carregar()} />
       {estado.status === "carregando" && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" aria-busy="true">
           {Array.from({ length: 9 }, (_, i) => (

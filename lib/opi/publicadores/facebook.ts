@@ -16,7 +16,13 @@ import {
  *   3. POST /{page_id}/video_reels  upload_phase=finish, video_state=PUBLISHED, description=<legenda>
  * Só Reel: os outros tipos saem como PULADO.
  */
-export async function publicarReelFacebook(post: PostParaPublicar, deps: PublicarDeps): Promise<ResultadoDestino> {
+export async function publicarReelFacebook(
+  post: PostParaPublicar,
+  deps: PublicarDeps,
+  /** estado "DRAFT" envia o Reel como rascunho da Página (teste de conexão): nada aparece para o público. */
+  opcoes: { estado?: "PUBLISHED" | "DRAFT" } = {},
+): Promise<ResultadoDestino> {
+  const estado = opcoes.estado ?? "PUBLISHED";
   if (post.tipo !== "REEL") return pulado("O Facebook só recebe Reel pelo painel");
   const pageId = deps.pageId;
   if (!pageId) throw new PublicadorErro("META_PAGE_ID não configurado", { repetivel: true });
@@ -42,9 +48,11 @@ export async function publicarReelFacebook(post: PostParaPublicar, deps: Publica
   await chamarGraph(deps, "POST", `${pageId}/video_reels`, {
     upload_phase: "finish",
     video_id: videoId,
-    video_state: "PUBLISHED",
+    video_state: estado,
     description: post.legenda,
   });
+  // Rascunho: o Facebook guardou o vídeo sem publicar. Não há o que esperar nem link público.
+  if (estado === "DRAFT") return { situacao: "publicado", externoId: videoId, permalink: null };
 
   // Daqui em diante o Facebook já aceitou a publicação: nada abaixo pode virar "tente de novo".
   await esperarProcessar(deps, videoId);

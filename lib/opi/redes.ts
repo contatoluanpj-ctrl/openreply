@@ -88,6 +88,10 @@ export interface RedeView {
   coletadoEm: string | null;
   /** Data (ISO) do último post publicado nesta rede pelo calendário (PostDestino). null se nunca saiu. */
   ultimoPostEm: string | null;
+  /** Conta que respondeu no último teste real de conexão (ex.: "@opcoesparainvestidores"). */
+  conta: string | null;
+  /** Motivo do último teste que falhou. null quando o último teste passou ou nunca houve teste. */
+  erroTeste: string | null;
 }
 
 function toIso(value: Date | string) {
@@ -98,9 +102,17 @@ function asMetricas(value: unknown): Metricas {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const out: Metricas = {};
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    // Chaves com "_" são anotações do teste de conexão (lib/opi/redes-teste.ts), não números do card.
+    if (k.startsWith("_")) continue;
     if (typeof v === "number" || typeof v === "string" || v === null) out[k] = v;
   }
   return out;
+}
+
+function anotacao(value: unknown, chave: string): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const v = (value as Record<string, unknown>)[chave];
+  return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 
 function asEstado(value: string): RedeEstado | null {
@@ -142,6 +154,8 @@ export function montarRedes(
       metricas,
       coletadoEm,
       ultimoPostEm: ultimosPosts[def.id] ?? null,
+      conta: snap ? anotacao(snap.metricas, "_conta") : null,
+      erroTeste: snap ? anotacao(snap.metricas, "_erro") : null,
     };
   });
 }

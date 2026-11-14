@@ -4,6 +4,7 @@ import { reconcileComments } from "@/lib/polling/comment-reconciler";
 import { reenviarAvisosPendentes } from "@/lib/opi/jev-worker";
 import { attachPendingNextReels } from "@/lib/automation/attach-next-reel";
 import { publicadorLigadoEnv, rodarPublicador } from "@/lib/opi/publicador";
+import { coletarRedesDeTodos } from "@/lib/opi/redes-coleta";
 import os from "node:os";
 
 const worker = createDMWorker();
@@ -69,11 +70,22 @@ const publicadorTimer = setInterval(() => {
   });
 }, 60_000);
 
+// OPI Central: teste de conexão e números de cada rede (só leitura), 2 min depois de subir e a cada 6 h.
+// É o que mantém "Conectado" verdadeiro na tela Redes sem ninguém apertar o botão.
+const coletaRedes = () =>
+  void coletarRedesDeTodos().catch((error) => {
+    console.error("[DM Worker] OPI: coleta das redes falhou:", error instanceof Error ? error.name : "erro");
+  });
+const coletaRedesInicio = setTimeout(coletaRedes, 120_000);
+const coletaRedesTimer = setInterval(coletaRedes, 6 * 60 * 60_000);
+
 async function shutdown(signal: string) {
   console.log(`[DM Worker] ${signal} received, closing worker`);
   clearInterval(heartbeatTimer);
   clearInterval(pollTimer);
   clearInterval(publicadorTimer);
+  clearTimeout(coletaRedesInicio);
+  clearInterval(coletaRedesTimer);
   await worker.close();
   process.exit(0);
 }
