@@ -6,7 +6,7 @@ import type { ResumoAgente } from "@/lib/opi/agentes-dados";
 import { Organograma } from "./organograma";
 import { PainelAgente } from "./painel-agente";
 
-/** Organograma clicável; o painel do agente abre à direita. Polling só com o painel aberto. */
+/** Grade de cartões clicável; o painel do agente abre à direita. Polling só com o painel aberto. */
 export function Equipe() {
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [resumo, setResumo] = useState<ResumoAgente[]>([]);

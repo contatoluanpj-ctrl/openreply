@@ -8,7 +8,7 @@ export default function AgentesPage() {
     <div>
       <PageHeader
         title="Equipe"
-        description="Você no topo, os C-levels no mesmo nível e a equipe de cada um embaixo. Clique em qualquer agente para mandar um pedido."
+        description="Você no topo e os diretores em cartões. Clique num diretor para ver a equipe dele; clique em alguém da equipe para mandar um pedido."
       />
       <Equipe />
     </div>
