@@ -574,9 +574,46 @@ model PostAgendado {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  destinos     PostDestino[]
 
   @@index([workspaceId])
   @@index([workspaceId, status, agendadoPara])
+}
+
+enum DestinoStatus {
+  PENDENTE
+  PUBLICANDO
+  PUBLICADO
+  ERRO
+  PULADO
+}
+
+/// OPI Central — um destino (rede) de um PostAgendado. O publicador publica destino a destino;
+/// PostAgendado.status segue como resumo (ver lib/opi/destinos.ts). `rede` é texto validado no
+/// código (REDES_DESTINO), no mesmo padrão de RedeSnapshot.rede.
+model PostDestino {
+  id          String        @id @default(cuid())
+  postId      String
+  rede        String
+  status      DestinoStatus @default(PENDENTE)
+  externoId   String?
+  permalink   String?
+  erro        String?
+  tentativas  Int           @default(0)
+  publicadoEm DateTime?
+  /// Metadados por rede (ex.: título e descrição do Short no YouTube).
+  titulo      String?
+  descricao   String?
+  /// Aprovação própria do destino. Obrigatória para linkedin e x (nunca saem só pela aprovação do mês).
+  aprovadoEm  DateTime?
+  aprovadoPor String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  post        PostAgendado  @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, rede])
+  @@index([status, rede])
+  @@index([rede, status, publicadoEm])
 }
 
 enum LancamentoTipo {

@@ -4,6 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { mockPrisma, mockAlertar, mockRefresh } = vi.hoisted(() => ({
   mockPrisma: {
     postAgendado: { findMany: vi.fn(), updateMany: vi.fn(), update: vi.fn() },
+    // Destinos: sem `destinos` no post, o publicador cria o do Instagram (upsert). A trava do destino
+    // (PENDENTE -> PUBLICANDO, por id) passa; as varreduras em lote não acham nada.
+    postDestino: {
+      upsert: vi.fn(async ({ create }: { create: { postId: string; rede: string } }) => ({
+        id: `d-${create.postId}`, postId: create.postId, rede: create.rede, status: "PENDENTE", tentativas: 0,
+        titulo: null, descricao: null, aprovadoEm: null, externoId: null, permalink: null, erro: null,
+      })),
+      updateMany: vi.fn(async ({ where }: { where: { id?: unknown; status?: unknown } }) => ({
+        count: typeof where.id === "string" && where.status === "PENDENTE" ? 1 : 0,
+      })),
+      update: vi.fn(async () => ({})),
+    },
     workspace: { findMany: vi.fn(), updateMany: vi.fn() },
     automation: { updateMany: vi.fn() },
     instagramAccount: { findMany: vi.fn(), update: vi.fn() },

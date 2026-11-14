@@ -3,6 +3,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const { mockPrisma } = vi.hoisted(() => ({
   mockPrisma: {
     postAgendado: { findMany: vi.fn(), updateMany: vi.fn(), update: vi.fn() },
+    // Destinos: sem `destinos` no post, o publicador cria o do Instagram (upsert). A trava do destino
+    // (PENDENTE -> PUBLICANDO, por id) passa; as varreduras em lote não acham nada.
+    postDestino: {
+      upsert: vi.fn(async ({ create }: { create: { postId: string; rede: string } }) => ({
+        id: `d-${create.postId}`, postId: create.postId, rede: create.rede, status: "PENDENTE", tentativas: 0,
+        titulo: null, descricao: null, aprovadoEm: null, externoId: null, permalink: null, erro: null,
+      })),
+      updateMany: vi.fn(async ({ where }: { where: { id?: unknown; status?: unknown } }) => ({
+        count: typeof where.id === "string" && where.status === "PENDENTE" ? 1 : 0,
+      })),
+      update: vi.fn(async () => ({})),
+    },
     workspace: { findMany: vi.fn() },
     automation: { updateMany: vi.fn() },
   },
@@ -44,6 +56,23 @@ function deps(f: typeof fetch): PublicarDeps {
 }
 
 const BASE = "https://graph.facebook.com/v25.0";
+
+// Quem entra na rodada: aprovado sem destino, ou com destino pronto para sair (ver filtroDestinoElegivel).
+const OR_DESTINOS = [
+  { status: "APROVADO", destinos: { none: {} } },
+  {
+    status: { in: ["APROVADO", "PUBLICADO"] },
+    destinos: {
+      some: {
+        status: "PENDENTE",
+        tentativas: { lt: 3 },
+        rede: { notIn: ["youtube", "linkedin", "x"] }, // sem COMPOSIO_API_KEY nos testes
+        OR: [{ rede: { notIn: ["linkedin", "x"] } }, { aprovadoEm: { not: null } }],
+      },
+    },
+  },
+  { status: "APROVADO", destinos: { some: { rede: "instagram", status: { in: ["PUBLICADO", "ERRO", "PULADO"] } } } },
+];
 
 describe("aviso obrigatório", () => {
   it("reconhece o aviso com espaços e maiúsculas diferentes", () => {
@@ -171,7 +200,7 @@ describe("rodarPublicador", () => {
     await rodarPublicador(agora, { fetch: vi.fn() as unknown as typeof fetch, token: TOKEN, igUserId: "IG1", versao: "v25.0" });
     expect(mockPrisma.postAgendado.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { status: "APROVADO", aprovadoEm: { not: null }, agendadoPara: { lte: agora } },
+        where: { aprovadoEm: { not: null }, agendadoPara: { lte: agora }, OR: OR_DESTINOS },
       }),
     );
   });
@@ -188,6 +217,11 @@ describe("rodarPublicador", () => {
     expect(mockPrisma.postAgendado.update).toHaveBeenCalledWith({
       where: { id: "p1" },
       data: { status: "PUBLICADO", mediaId: "m9", permalink: "https://instagram.com/p/9", erro: null },
+    });
+    // O destino instagram guarda o mesmo resultado.
+    expect(mockPrisma.postDestino.update).toHaveBeenCalledWith({
+      where: { id: "d-p1" },
+      data: expect.objectContaining({ status: "PUBLICADO", externoId: "m9", permalink: "https://instagram.com/p/9", erro: null }),
     });
   });
 
@@ -280,9 +314,9 @@ describe("chave da publicação automática no painel (Workspace.opiPublicadorLi
       expect.objectContaining({
         where: {
           workspaceId: { in: ["w1"] },
-          status: "APROVADO",
           aprovadoEm: { not: null },
           agendadoPara: { lte: agora },
+          OR: OR_DESTINOS,
         },
       }),
     );

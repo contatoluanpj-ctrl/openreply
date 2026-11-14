@@ -1,17 +1,18 @@
 import { getCurrentWorkspaceId } from "@/lib/auth";
 import { prisma } from "@/lib/db/client";
+import { ultimoPublicadoPorRede } from "@/lib/opi/destinos";
 import { montarRedes } from "@/lib/opi/redes";
 
 export const dynamic = "force-dynamic";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
-/** GET /api/opi/redes — as 9 redes com o último snapshot de cada uma (sessão do painel). */
+/** GET /api/opi/redes — as 9 redes com o último snapshot de cada uma e a data do último post publicado (sessão do painel). */
 export async function GET() {
   const workspaceId = await getCurrentWorkspaceId();
   if (!workspaceId) return Response.json({ error: "Não autenticado" }, { status: 401, headers: NO_STORE });
   try {
-    const [snapshots, ig] = await Promise.all([
+    const [snapshots, ig, ultimos] = await Promise.all([
       prisma.redeSnapshot.findMany({
         where: { workspaceId },
         orderBy: { coletadoEm: "desc" },
@@ -23,8 +24,9 @@ export async function GET() {
         orderBy: { date: "desc" },
         select: { followersCount: true, date: true },
       }),
+      ultimoPublicadoPorRede(prisma, workspaceId),
     ]);
-    return Response.json({ data: montarRedes(snapshots, ig) }, { headers: NO_STORE });
+    return Response.json({ data: montarRedes(snapshots, ig, ultimos) }, { headers: NO_STORE });
   } catch {
     return Response.json({ error: "Erro ao carregar as redes" }, { status: 500, headers: NO_STORE });
   }

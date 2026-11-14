@@ -86,6 +86,8 @@ export interface RedeView {
   estado: RedeEstado;
   metricas: Metricas;
   coletadoEm: string | null;
+  /** Data (ISO) do último post publicado nesta rede pelo calendário (PostDestino). null se nunca saiu. */
+  ultimoPostEm: string | null;
 }
 
 function toIso(value: Date | string) {
@@ -107,9 +109,14 @@ function asEstado(value: string): RedeEstado | null {
 
 /**
  * Monta a lista final das 9 redes a partir dos snapshots (qualquer ordem; vale o mais recente
- * de cada rede) e, opcionalmente, do último FollowerSnapshot real do Instagram.
+ * de cada rede) e, opcionalmente, do último FollowerSnapshot real do Instagram e da data do
+ * último post publicado em cada rede (PostDestino).
  */
-export function montarRedes(snapshots: SnapshotRow[], igFollowers?: IgFollowers | null): RedeView[] {
+export function montarRedes(
+  snapshots: SnapshotRow[],
+  igFollowers?: IgFollowers | null,
+  ultimosPosts: Record<string, string> = {},
+): RedeView[] {
   const ultimo = new Map<string, SnapshotRow>();
   for (const s of snapshots) {
     const atual = ultimo.get(s.rede);
@@ -126,7 +133,16 @@ export function montarRedes(snapshots: SnapshotRow[], igFollowers?: IgFollowers 
       const igDate = toIso(igFollowers.date);
       if (!coletadoEm || igDate > coletadoEm) coletadoEm = igDate;
     }
-    return { id: def.id, nome: def.nome, tipo: def.tipo, funcoes: def.funcoes, estado, metricas, coletadoEm };
+    return {
+      id: def.id,
+      nome: def.nome,
+      tipo: def.tipo,
+      funcoes: def.funcoes,
+      estado,
+      metricas,
+      coletadoEm,
+      ultimoPostEm: ultimosPosts[def.id] ?? null,
+    };
   });
 }
 

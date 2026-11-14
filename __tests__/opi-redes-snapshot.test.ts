@@ -4,11 +4,12 @@ const state = vi.hoisted(() => ({
   keys: { findUnique: vi.fn(), update: vi.fn() },
   redes: { create: vi.fn(), findMany: vi.fn() },
   followers: { findFirst: vi.fn() },
+  destinos: { groupBy: vi.fn(async () => [] as Array<{ rede: string; _max: { publicadoEm: Date | null } }>) },
   workspace: vi.fn(),
   eval: vi.fn(),
 }));
 vi.mock("@/lib/db/client", () => ({
-  prisma: { serviceKey: state.keys, redeSnapshot: state.redes, followerSnapshot: state.followers },
+  prisma: { serviceKey: state.keys, redeSnapshot: state.redes, followerSnapshot: state.followers, postDestino: state.destinos },
 }));
 vi.mock("@/lib/auth", () => ({ getCurrentWorkspaceId: state.workspace }));
 vi.mock("ioredis", () => ({ default: class { status = "ready"; eval = state.eval; listenerCount() { return 1; } } }));

@@ -1,169 +1,44 @@
 import { prisma } from "@/lib/db/client";
 import { getMetaGraphApiVersion } from "@/lib/env";
 import { resolvePageAccessToken } from "@/lib/meta/facebook-login";
-import { facebookInstagramUserId, facebookPageAccessToken } from "@/lib/meta/login-mode";
+import { facebookInstagramUserId, facebookPageAccessToken, facebookPageId } from "@/lib/meta/login-mode";
 import { alertarFalha } from "@/lib/opi/alertas";
 import { temAviso } from "@/lib/opi/aviso";
 import { PREFIXO_ALVO, filtroSemAlvo } from "@/lib/opi/campanha-alvo";
+import {
+  MAX_TENTATIVAS,
+  REDES_COMPOSIO,
+  REDES_META,
+  destinoElegivel,
+  filtroDestinoElegivel,
+  nomeRede,
+  ordenarDestinos,
+  resumoDoPost,
+  type DestinoLinha,
+} from "@/lib/opi/destinos";
+import { publicarDestino } from "@/lib/opi/publicadores";
+import { COMPOSIO_NAO_CONFIGURADO, composioConfig, semChave } from "@/lib/opi/publicadores/composio";
+import { semToken, type PublicarDeps } from "@/lib/opi/publicadores/graph";
+import type { ResultadoPublicacao } from "@/lib/opi/publicadores/instagram";
+import { PublicadorErro } from "@/lib/opi/publicadores/tipos";
 
 /**
  * Publicador do calendário do OPI Central.
  *
- * Só publica PostAgendado com status APROVADO (aprovado pelo Luan na tela, D-0026)
- * e com o aviso obrigatório na legenda. Fica desligado até OPI_PUBLICADOR=on OU até a
- * chave "Publicação automática" ser ligada no Calendário (Workspace.opiPublicadorLigado).
- * A chave do painel vale só para o workspace dono da conta do Instagram que publica.
- * Usa a Graph API (Facebook Login for Business) com o token da Página.
+ * Só publica PostAgendado aprovado pelo Luan na tela (D-0026) e com o aviso obrigatório na legenda.
+ * Fica desligado até OPI_PUBLICADOR=on OU até a chave "Publicação automática" ser ligada no Calendário
+ * (Workspace.opiPublicadorLigado). A chave do painel vale só para o workspace dono da conta do Instagram
+ * que publica.
+ *
+ * Cada post tem um destino por rede (PostDestino). A rodada publica destino a destino, pelos publicadores
+ * de lib/opi/publicadores: a falha de uma rede não impede as outras, cada falha avisa o Luan, e um destino
+ * PUBLICADO nunca é publicado de novo. PostAgendado.status segue como resumo (lib/opi/destinos.ts).
  */
 
-export type PostParaPublicar = {
-  id: string;
-  tipo: "CARROSSEL" | "REEL" | "POST";
-  midias: unknown;
-  legenda: string;
-};
-
-export type PublicarDeps = {
-  fetch: typeof fetch;
-  token: string;
-  igUserId: string;
-  versao: string;
-  /** Espera entre consultas do status do Reel. Injetável nos testes. */
-  esperar?: (ms: number) => Promise<void>;
-  /** Intervalo e limite da espera do Reel. Padrão: 10 s, 30 tentativas (~5 min). */
-  intervaloReelMs?: number;
-  tentativasReel?: number;
-};
-
-export type ResultadoPublicacao = { mediaId: string; permalink: string | null };
-
-export class GraphErro extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "GraphErro";
-  }
-}
-
-const esperaPadrao = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-
-function semToken(texto: string, token: string): string {
-  let t = texto;
-  if (token) t = t.split(token).join("[token]");
-  return t.replace(/access_token=[^&\s"]+/g, "access_token=[token]").slice(0, 300);
-}
-
-async function chamarGraph(
-  deps: PublicarDeps,
-  metodo: "GET" | "POST",
-  caminho: string,
-  params: Record<string, string>,
-): Promise<Record<string, unknown>> {
-  const base = `https://graph.facebook.com/${deps.versao}/${caminho}`;
-  let resposta: Response;
-  try {
-    if (metodo === "GET") {
-      const url = new URL(base);
-      for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-      url.searchParams.set("access_token", deps.token);
-      resposta = await deps.fetch(url.toString());
-    } else {
-      const corpo = new URLSearchParams({ ...params, access_token: deps.token });
-      resposta = await deps.fetch(base, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: corpo.toString(),
-      });
-    }
-  } catch (e) {
-    throw new GraphErro(semToken(`Falha de rede na Graph: ${e instanceof Error ? e.message : "erro"}`, deps.token));
-  }
-  let dados: Record<string, unknown> = {};
-  try {
-    dados = (await resposta.json()) as Record<string, unknown>;
-  } catch {
-    dados = {};
-  }
-  if (!resposta.ok || dados.error) {
-    const err = (dados.error ?? {}) as { message?: string; code?: number };
-    const msg = `Graph ${resposta.status}${err.code ? ` (código ${err.code})` : ""}: ${err.message ?? "erro sem mensagem"}`;
-    throw new GraphErro(semToken(msg, deps.token));
-  }
-  return dados;
-}
-
-function idDe(dados: Record<string, unknown>, etapa: string): string {
-  const id = dados.id;
-  if (typeof id !== "string" || !id) throw new GraphErro(`Graph não devolveu id em ${etapa}`);
-  return id;
-}
-
-function listaMidias(midias: unknown): string[] {
-  if (!Array.isArray(midias)) return [];
-  return midias.filter((m): m is string => typeof m === "string" && m.startsWith("https://"));
-}
-
-async function esperarContainer(deps: PublicarDeps, containerId: string): Promise<void> {
-  const esperar = deps.esperar ?? esperaPadrao;
-  const intervalo = deps.intervaloReelMs ?? 10_000;
-  const tentativas = deps.tentativasReel ?? 30;
-  for (let i = 0; i < tentativas; i++) {
-    const dados = await chamarGraph(deps, "GET", containerId, { fields: "status_code" });
-    const status = String(dados.status_code ?? "");
-    if (status === "FINISHED") return;
-    if (status === "ERROR" || status === "EXPIRED") {
-      throw new GraphErro(`O Instagram recusou o vídeo (status ${status})`);
-    }
-    await esperar(intervalo);
-  }
-  throw new GraphErro("O vídeo não terminou de processar a tempo");
-}
-
-/** Publica um post na conta do Instagram. Lança GraphErro com mensagem curta e sem token. */
-export async function publicarPost(post: PostParaPublicar, deps: PublicarDeps): Promise<ResultadoPublicacao> {
-  const midias = listaMidias(post.midias);
-  const ig = deps.igUserId;
-  let containerId: string;
-
-  if (post.tipo === "CARROSSEL") {
-    if (midias.length < 2 || midias.length > 10) throw new GraphErro("Carrossel precisa de 2 a 10 imagens");
-    const filhos: string[] = [];
-    for (const url of midias) {
-      const filho = await chamarGraph(deps, "POST", `${ig}/media`, { image_url: url, is_carousel_item: "true" });
-      filhos.push(idDe(filho, "item do carrossel"));
-    }
-    const carrossel = await chamarGraph(deps, "POST", `${ig}/media`, {
-      media_type: "CAROUSEL",
-      children: filhos.join(","),
-      caption: post.legenda,
-    });
-    containerId = idDe(carrossel, "carrossel");
-  } else if (post.tipo === "REEL") {
-    if (midias.length !== 1) throw new GraphErro("Reel leva exatamente 1 vídeo");
-    const reel = await chamarGraph(deps, "POST", `${ig}/media`, {
-      media_type: "REELS",
-      video_url: midias[0],
-      caption: post.legenda,
-    });
-    containerId = idDe(reel, "reel");
-    await esperarContainer(deps, containerId);
-  } else {
-    if (midias.length !== 1) throw new GraphErro("Post leva exatamente 1 imagem");
-    const imagem = await chamarGraph(deps, "POST", `${ig}/media`, { image_url: midias[0], caption: post.legenda });
-    containerId = idDe(imagem, "imagem");
-  }
-
-  const publicado = await chamarGraph(deps, "POST", `${ig}/media_publish`, { creation_id: containerId });
-  const mediaId = idDe(publicado, "media_publish");
-
-  let permalink: string | null = null;
-  try {
-    const info = await chamarGraph(deps, "GET", mediaId, { fields: "permalink" });
-    permalink = typeof info.permalink === "string" ? info.permalink : null;
-  } catch {
-    permalink = null; // já publicado; o link é só conveniência
-  }
-  return { mediaId, permalink };
-}
+// Compatibilidade: o publicador do Instagram morava aqui.
+export { publicarPost, type ResultadoPublicacao } from "@/lib/opi/publicadores/instagram";
+export { GraphErro, type PublicarDeps } from "@/lib/opi/publicadores/graph";
+export type { PostParaPublicar } from "@/lib/opi/publicadores/tipos";
 
 /** OPI_PUBLICADOR=on no ambiente do worker: liga para todos os workspaces (modo antigo). */
 export function publicadorLigadoEnv(): boolean {
@@ -222,22 +97,45 @@ export type ResumoRodada = {
   ligado: boolean;
   /** Workspaces com a chave do painel ligada nesta rodada (vazio quando vale o OPI_PUBLICADOR=on). */
   workspaces: string[];
+  /** Destinos publicados nesta rodada. */
   publicados: number;
+  /** Destinos que falharam (e posts barrados pelo aviso obrigatório). */
   erros: number;
+  /** Destinos pulados (rede não recebe o tipo) e posts/destinos que outra rodada já tinha travado. */
   pulados: number;
+};
+
+type Env = Record<string, string | undefined>;
+
+/** Dependências injetáveis nos testes: as da Graph e o ambiente lido pelos publicadores do Composio. */
+export type DepsRodada = Partial<PublicarDeps> & { env?: Env };
+
+type DestinoDaRodada = DestinoLinha & { titulo?: string | null; descricao?: string | null };
+
+type PostDaRodada = {
+  id: string;
+  workspaceId: string;
+  tipo: "CARROSSEL" | "REEL" | "POST";
+  midias: unknown;
+  legenda: string;
+  agendadoPara: Date;
+  status: string;
+  destinos?: DestinoDaRodada[];
 };
 
 let rodando = false;
 
 /**
  * Uma rodada do publicador (o worker chama a cada minuto).
- * Pega APROVADO com agendadoPara <= agora, trava cada um com updateMany
- * APROVADO -> PUBLICANDO (só segue se count === 1), publica e grava o resultado.
+ *
+ * 1. Pega os posts aprovados com agendadoPara <= agora que ainda têm destino por sair.
+ * 2. Post APROVADO é travado com updateMany APROVADO -> PUBLICANDO (só segue se count === 1); assim a tela
+ *    não deixa editar nem apagar no meio da publicação.
+ * 3. Cada destino é travado com updateMany PENDENTE -> PUBLICANDO (só segue se count === 1) e publicado
+ *    na rede dele. Falha em uma rede não interrompe as outras.
+ * 4. O status do post é regravado como resumo dos destinos.
  */
-export async function rodarPublicador(
-  agora: Date = new Date(),
-  depsTeste?: Partial<PublicarDeps>,
-): Promise<ResumoRodada> {
+export async function rodarPublicador(agora: Date = new Date(), depsTeste?: DepsRodada): Promise<ResumoRodada> {
   const resumo: ResumoRodada = { ligado: false, workspaces: [], publicados: 0, erros: 0, pulados: 0 };
   if (rodando) return resumo;
   rodando = true;
@@ -263,14 +161,14 @@ export async function rodarPublicador(
     }
     resumo.ligado = true;
 
+    const env = depsTeste?.env ?? process.env;
+    const composio = composioConfig(env);
+    const limiteTravado = new Date(agora.getTime() - PUBLICANDO_TRAVADO_MS);
+
     // Post que ficou em PUBLICANDO (worker caiu no meio) vira ERRO para o Luan conferir.
     // Não volta para APROVADO sozinho, para nunca publicar duas vezes.
     const travados = await prisma.postAgendado.updateMany({
-      where: {
-        ...filtroWorkspace,
-        status: "PUBLICANDO",
-        updatedAt: { lt: new Date(agora.getTime() - PUBLICANDO_TRAVADO_MS) },
-      },
+      where: { ...filtroWorkspace, status: "PUBLICANDO", updatedAt: { lt: limiteTravado } },
       data: { status: "ERRO", erro: "Publicação interrompida. Confira no Instagram antes de aprovar de novo." },
     });
     if ((travados?.count ?? 0) > 0) {
@@ -281,29 +179,74 @@ export async function rodarPublicador(
         { chave: "post:interrompido" },
       );
     }
-
-    const pendentes = await prisma.postAgendado.findMany({
-      where: { ...filtroWorkspace, status: "APROVADO", aprovadoEm: { not: null }, agendadoPara: { lte: agora } },
-      orderBy: { agendadoPara: "asc" },
-      take: LIMITE_POR_RODADA,
+    // O mesmo para o destino que ficou em PUBLICANDO: vira ERRO e só volta com nova aprovação.
+    const destinosTravados = await prisma.postDestino.updateMany({
+      where: { status: "PUBLICANDO", updatedAt: { lt: limiteTravado }, post: filtroWorkspace },
+      data: { status: "ERRO", erro: "Publicação interrompida. Confira na rede antes de tentar de novo." },
     });
+    if ((destinosTravados?.count ?? 0) > 0) {
+      await alertarFalha(
+        "post",
+        `${destinosTravados.count} destino(s) com a publicação interrompida. Confira na rede antes de tentar de novo.`,
+        LINK_CALENDARIO,
+        { chave: "destino:interrompido" },
+      );
+    }
+
+    const postsNoPrazo = { ...filtroWorkspace, aprovadoEm: { not: null }, agendadoPara: { lte: agora } };
+
+    // Sem a chave do Composio, YouTube, LinkedIn e X ficam PENDENTE com o motivo escrito no destino.
+    // Não entram na fila da rodada (não gastam tentativa) e não geram alerta.
+    if (!composio) {
+      await prisma.postDestino.updateMany({
+        where: {
+          status: "PENDENTE",
+          rede: { in: [...REDES_COMPOSIO] },
+          OR: [{ erro: null }, { erro: { not: COMPOSIO_NAO_CONFIGURADO } }],
+          post: { ...postsNoPrazo, status: { in: ["APROVADO", "PUBLICADO"] } },
+        },
+        data: { erro: COMPOSIO_NAO_CONFIGURADO },
+      });
+    }
+
+    const elegivel = filtroDestinoElegivel(composio !== null);
+    const pendentes = (await prisma.postAgendado.findMany({
+      where: {
+        ...postsNoPrazo,
+        OR: [
+          // Aprovado antes de existirem destinos (ou por script): ganha o destino instagram na hora.
+          { status: "APROVADO", destinos: { none: {} } },
+          // Aprovado que ainda não saiu, ou já publicado no Instagram com outra rede por sair.
+          { status: { in: ["APROVADO", "PUBLICADO"] }, destinos: { some: elegivel } },
+          // Aprovado de novo por fora da tela (script) com o destino instagram já resolvido:
+          // se já saiu, só acerta o resumo; se tinha falhado, a nova aprovação devolve o destino para a fila.
+          { status: "APROVADO", destinos: { some: { rede: "instagram", status: { in: ["PUBLICADO", "ERRO", "PULADO"] } } } },
+        ],
+      },
+      orderBy: [{ agendadoPara: "asc" }, { id: "asc" }],
+      take: LIMITE_POR_RODADA,
+      include: { destinos: true },
+    })) as unknown as PostDaRodada[];
     if (pendentes.length === 0) return resumo;
 
-    let deps: PublicarDeps;
+    // Token da Página e ids da Meta: usados pelo Instagram e pelo Facebook.
+    let graph: PublicarDeps | null = null;
     try {
-      deps = {
+      graph = {
         fetch: depsTeste?.fetch ?? fetch,
         token: depsTeste?.token ?? (await resolvePageAccessToken(facebookPageAccessToken())),
         igUserId: depsTeste?.igUserId ?? facebookInstagramUserId(),
         versao: depsTeste?.versao ?? getMetaGraphApiVersion(),
+        pageId: depsTeste?.pageId ?? pageIdOpcional(),
         esperar: depsTeste?.esperar,
         intervaloReelMs: depsTeste?.intervaloReelMs,
         tentativasReel: depsTeste?.tentativasReel,
       };
     } catch {
       console.error("[OPI Publicador] Configuração da Meta ausente (META_PAGE_ACCESS_TOKEN, META_PAGE_ID, META_IG_USER_ID)");
-      return resumo;
     }
+    const contexto = { graph, fetch: depsTeste?.fetch ?? fetch, env };
+    const limpar = (texto: string) => semChave(semToken(texto, graph?.token ?? ""), composio?.apiKey ?? "");
 
     for (const post of pendentes) {
       // Confere de novo, post a post, que o workspace dele está liberado nesta rodada.
@@ -311,19 +254,64 @@ export async function rodarPublicador(
         resumo.pulados++;
         continue;
       }
-      const trava = await prisma.postAgendado.updateMany({
-        where: { id: post.id, status: "APROVADO" },
-        data: { status: "PUBLICANDO", erro: null },
-      });
-      if (trava.count !== 1) {
-        resumo.pulados++;
+      const eraAprovado = post.status === "APROVADO";
+      let destinos: DestinoDaRodada[] = ordenarDestinos(post.destinos ?? []);
+      if (destinos.length === 0) {
+        if (!eraAprovado) continue;
+        const criado = await prisma.postDestino.upsert({
+          where: { postId_rede: { postId: post.id, rede: "instagram" } },
+          create: { postId: post.id, rede: "instagram" },
+          update: {},
+        });
+        destinos = [criado as unknown as DestinoDaRodada];
+      }
+
+      // Post APROVADO com o destino instagram em ERRO só existe quando alguém aprovou de novo por fora da tela
+      // (a rodada sempre grava ERRO no post quando o Instagram falha). Aprovação nova = tentativa nova, como na tela.
+      // Vale só para o Instagram, que é quem define o resumo; as outras redes voltam pela tela ("tentar de novo").
+      const igParado = eraAprovado ? destinos.find((d) => d.rede === "instagram" && (d.status === "ERRO" || d.status === "PULADO")) : undefined;
+      if (igParado) {
+        const solto = await prisma.postDestino.updateMany({
+          where: { id: igParado.id, status: { in: ["ERRO", "PULADO"] } },
+          data: { status: "PENDENTE", erro: null, tentativas: 0 },
+        });
+        if (solto.count === 1) Object.assign(igParado, { status: "PENDENTE", erro: null, tentativas: 0 });
+      }
+
+      // Sem a configuração da Meta, Instagram e Facebook esperam (como antes: nada é travado).
+      const candidatos = destinos.filter(
+        (d) => destinoElegivel(d, composio !== null) && (graph !== null || !(REDES_META as readonly string[]).includes(d.rede)),
+      );
+      if (candidatos.length === 0) {
+        // Nada a publicar. Se o resumo já não é "aprovado" (ex.: Instagram já saiu), acerta o status do post.
+        const r = resumoDoPost(destinos);
+        if (eraAprovado && r.status !== "APROVADO") {
+          await prisma.postAgendado.updateMany({ where: { id: post.id, status: "APROVADO" }, data: r });
+        }
         continue;
       }
-      if (!temAviso(post.legenda)) {
-        await prisma.postAgendado.update({
-          where: { id: post.id },
-          data: { status: "ERRO", erro: "Legenda sem o aviso obrigatório. Nada foi publicado." },
+
+      if (eraAprovado) {
+        const trava = await prisma.postAgendado.updateMany({
+          where: { id: post.id, status: "APROVADO" },
+          data: { status: "PUBLICANDO", erro: null },
         });
+        if (trava.count !== 1) {
+          resumo.pulados++;
+          continue;
+        }
+      }
+
+      if (!temAviso(post.legenda)) {
+        const erro = "Legenda sem o aviso obrigatório. Nada foi publicado.";
+        if (eraAprovado) {
+          await prisma.postAgendado.update({ where: { id: post.id }, data: { status: "ERRO", erro } });
+        } else {
+          await prisma.postDestino.updateMany({
+            where: { id: { in: candidatos.map((d) => d.id) }, status: "PENDENTE" },
+            data: { status: "ERRO", erro },
+          });
+        }
         resumo.erros++;
         await alertarFalha("post", `${rotuloPost(post)}: legenda sem o aviso obrigatório. Nada foi publicado.`, LINK_CALENDARIO, {
           chave: `post:${post.id}`,
@@ -331,27 +319,76 @@ export async function rodarPublicador(
         });
         continue;
       }
-      try {
-        const r = await publicarPost(post, deps);
-        await prisma.postAgendado.update({
-          where: { id: post.id },
-          data: { status: "PUBLICADO", mediaId: r.mediaId, permalink: r.permalink, erro: null },
+
+      for (const destino of candidatos) {
+        const feitas = (destino.tentativas ?? 0) + 1;
+        // Trava do destino: só uma rodada leva PENDENTE -> PUBLICANDO. PUBLICADO nunca volta para a fila.
+        const trava = await prisma.postDestino.updateMany({
+          where: { id: destino.id, status: "PENDENTE" },
+          data: { status: "PUBLICANDO", erro: null, tentativas: { increment: 1 } },
         });
-        resumo.publicados++;
-        if (post.tipo === "REEL") await prenderCampanhasAoReel(post, r);
-      } catch (e) {
-        const msg = semToken(e instanceof Error ? e.message : "Erro desconhecido", deps.token);
-        await prisma.postAgendado.update({ where: { id: post.id }, data: { status: "ERRO", erro: msg } });
-        console.error("[OPI Publicador] Falha ao publicar", post.id, msg);
-        resumo.erros++;
-        await alertarFalha("post", `${rotuloPost(post)}: ${msg}`, LINK_CALENDARIO, {
-          chave: `post:${post.id}`,
-          workspaceId: post.workspaceId,
-        });
+        if (trava.count !== 1) {
+          resumo.pulados++;
+          continue;
+        }
+        try {
+          const r = await publicarDestino(post, destino, contexto);
+          if (r.situacao === "publicado") {
+            await prisma.postDestino.update({
+              where: { id: destino.id },
+              data: { status: "PUBLICADO", externoId: r.externoId, permalink: r.permalink, erro: null, publicadoEm: new Date() },
+            });
+            Object.assign(destino, { status: "PUBLICADO", externoId: r.externoId, permalink: r.permalink, erro: null });
+            resumo.publicados++;
+            if (destino.rede === "instagram" && post.tipo === "REEL") {
+              await prenderCampanhasAoReel(post, { mediaId: r.externoId, permalink: r.permalink });
+            }
+          } else if (r.situacao === "pulado") {
+            await prisma.postDestino.update({ where: { id: destino.id }, data: { status: "PULADO", erro: r.motivo } });
+            Object.assign(destino, { status: "PULADO", erro: r.motivo });
+            resumo.pulados++;
+          } else {
+            // Falta configuração ou aprovação: volta a esperar, sem gastar tentativa e sem alerta.
+            await prisma.postDestino.update({
+              where: { id: destino.id },
+              data: { status: "PENDENTE", erro: r.motivo, tentativas: { decrement: 1 } },
+            });
+            Object.assign(destino, { status: "PENDENTE", erro: r.motivo });
+          }
+        } catch (e) {
+          const msg = limpar(e instanceof Error ? e.message : "Erro desconhecido");
+          // Só tenta de novo sozinho quando é certo que nada saiu, e até o limite de tentativas.
+          const repetir = e instanceof PublicadorErro && e.repetivel && feitas < MAX_TENTATIVAS;
+          const status = repetir ? "PENDENTE" : "ERRO";
+          await prisma.postDestino.update({ where: { id: destino.id }, data: { status, erro: msg } });
+          Object.assign(destino, { status, erro: msg, tentativas: feitas });
+          console.error("[OPI Publicador] Falha ao publicar", post.id, destino.rede, msg);
+          resumo.erros++;
+          const noInstagram = destino.rede === "instagram";
+          await alertarFalha(
+            "post",
+            noInstagram ? `${rotuloPost(post)}: ${msg}` : `${rotuloPost(post)} no ${nomeRede(destino.rede)}: ${msg}`,
+            LINK_CALENDARIO,
+            { chave: noInstagram ? `post:${post.id}` : `post:${post.id}:${destino.rede}`, workspaceId: post.workspaceId },
+          );
+        }
+      }
+
+      // Resumo do post. Só o post que esta rodada travou (APROVADO -> PUBLICANDO) precisa ser regravado.
+      if (eraAprovado) {
+        await prisma.postAgendado.update({ where: { id: post.id }, data: resumoDoPost(destinos) });
       }
     }
     return resumo;
   } finally {
     rodando = false;
+  }
+}
+
+function pageIdOpcional(): string | undefined {
+  try {
+    return facebookPageId();
+  } catch {
+    return undefined;
   }
 }

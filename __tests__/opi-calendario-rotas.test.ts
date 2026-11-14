@@ -9,6 +9,7 @@ const { mockPrisma, auth, access } = vi.hoisted(() => ({
       updateMany: vi.fn(),
       deleteMany: vi.fn(),
     },
+    postDestino: { createMany: vi.fn(async () => ({ count: 0 })), updateMany: vi.fn(async () => ({ count: 0 })) },
     user: { findUnique: vi.fn() },
   },
   auth: { getCurrentWorkspaceId: vi.fn() },
