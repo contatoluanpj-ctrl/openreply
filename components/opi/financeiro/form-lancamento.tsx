@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import type { LancamentoJson, Status, Tipo } from "@/lib/opi/financeiro";
 
 const CAMPO =
-  "h-10 w-full rounded-xl border border-border bg-white/70 px-3.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20";
+  "h-10 w-full rounded-xl border border-border bg-surface-hover px-3.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20";
 const ROTULO = "grid gap-1.5 text-[11px] font-semibold uppercase tracking-[.1em] text-muted";
 
 function Seg<T extends string>({ valor, opcoes, onChange, rotulo }: { valor: T; opcoes: [T, string][]; onChange: (v: T) => void; rotulo: string }) {
@@ -120,7 +120,7 @@ export function FormLancamento({ editando, onSalvo, onCancelar }: FormLancamento
         <button
           type="submit"
           disabled={salvando}
-          className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground shadow-[0_0_18px_rgba(217,84,30,.4)] hover:bg-accent-hover disabled:opacity-50"
+          className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
         >
           {salvando ? "Salvando…" : editando ? "Salvar alterações" : "Adicionar lançamento"}
         </button>
@@ -128,7 +128,7 @@ export function FormLancamento({ editando, onSalvo, onCancelar }: FormLancamento
           <button
             type="button"
             onClick={onCancelar}
-            className="rounded-full border border-border bg-white/50 px-5 py-2.5 text-sm font-semibold text-foreground/80 hover:bg-white/80"
+            className="rounded-full border border-border bg-surface px-5 py-2.5 text-sm font-semibold text-foreground/80 hover:bg-surface-hover"
           >
             Cancelar
           </button>

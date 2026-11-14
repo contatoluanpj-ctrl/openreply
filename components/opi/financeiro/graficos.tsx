@@ -17,12 +17,13 @@ import {
 } from "recharts";
 import { formatarBRL } from "@/lib/opi/financeiro";
 import { COR, rotuloMes, Vazio } from "./graficos-base";
+import { EIXO_GRAFICO, RAMPA_GRAFICO } from "@/lib/opi/cores-grafico";
 
 export { CabecalhoGrafico, COR, Legenda, rotuloMes, Vazio } from "./graficos-base";
 import type { FatiaCategoria, PontoMes, PrevistoPago } from "@/lib/opi/financeiro-dados";
 
 /** Rampa do donut: laranja e grafite alternados, do mais forte ao mais leve. */
-const RAMPA = ["#D9541E", "#111217", "#E8936B", "rgba(17,18,23,.45)", "#F3C2A9", "rgba(17,18,23,.2)"];
+const RAMPA = RAMPA_GRAFICO;
 
 /** "R$ 1,2 mil" no eixo, para não poluir. */
 function brlCurto(centavos: number) {
@@ -32,7 +33,7 @@ function brlCurto(centavos: number) {
   return `${v < 0 ? "−" : ""}R$ ${Math.round(abs)}`;
 }
 
-const EIXO = { fontSize: 11, fill: COR.eixo };
+const EIXO = EIXO_GRAFICO;
 
 type ItemTip = { name?: string | number; value?: number | string; color?: string; dataKey?: string | number };
 
@@ -40,11 +41,11 @@ function Dica({ active, payload, label, rotulos }: { active?: boolean; payload?:
   if (!active || !payload?.length) return null;
   return (
     <div className="opi-tip">
-      <i className="block not-italic text-white/60">{label ? rotuloMes(String(label), true) : ""}</i>
+      <i className="block not-italic text-muted">{label ? rotuloMes(String(label), true) : ""}</i>
       {payload.map((p) => (
         <div key={String(p.dataKey)} className="mt-0.5 flex items-center gap-2">
           <span className="inline-block h-2 w-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-white/70">{rotulos[String(p.dataKey)] ?? p.name}</span>
+          <span className="text-muted">{rotulos[String(p.dataKey)] ?? p.name}</span>
           <b className="ml-auto pl-3 text-[13px] tabular-nums">{formatarBRL(Number(p.value ?? 0))}</b>
         </div>
       ))}
@@ -64,7 +65,7 @@ export function GraficoReceitaDespesa({ serie }: { serie: PontoMes[] }) {
           <CartesianGrid vertical={false} stroke={COR.grade} />
           <XAxis dataKey="mes" tickFormatter={(m) => rotuloMes(m)} axisLine={false} tickLine={false} tick={EIXO} />
           <YAxis tickFormatter={brlCurto} axisLine={false} tickLine={false} tick={EIXO} width={64} />
-          <Tooltip cursor={{ fill: "rgba(17,18,23,.04)" }} content={<Dica rotulos={{ receita: "Receita", despesa: "Despesa" }} />} />
+          <Tooltip cursor={{ fill: COR.cursor }} content={<Dica rotulos={{ receita: "Receita", despesa: "Despesa" }} />} />
           <Bar dataKey="receita" fill={COR.principal} radius={[6, 6, 0, 0]} maxBarSize={22} />
           <Bar dataKey="despesa" fill={COR.secundaria} radius={[6, 6, 0, 0]} maxBarSize={22} />
         </BarChart>
@@ -94,7 +95,7 @@ export function GraficoSaldo({ serie }: { serie: PontoMes[] }) {
           <YAxis tickFormatter={brlCurto} axisLine={false} tickLine={false} tick={EIXO} width={64} />
           {negativo && <ReferenceLine y={0} stroke={COR.terciaria} strokeDasharray="4 4" />}
           <Tooltip
-            cursor={{ stroke: "rgba(17,18,23,.25)", strokeDasharray: "4 4" }}
+            cursor={{ stroke: COR.terciaria, strokeDasharray: "4 4" }}
             content={<Dica rotulos={{ acumulado: "Saldo acumulado", saldo: "Saldo do mês" }} />}
           />
           <Area
@@ -103,7 +104,7 @@ export function GraficoSaldo({ serie }: { serie: PontoMes[] }) {
             stroke={COR.principal}
             strokeWidth={3}
             fill="url(#opi-fin-saldo)"
-            activeDot={{ r: 6, fill: COR.principal, stroke: "#fff", strokeWidth: 2 }}
+            activeDot={{ r: 6, fill: COR.principal, stroke: COR.contorno, strokeWidth: 2 }}
             dot={false}
           />
           <Area type="monotone" dataKey="saldo" stroke={COR.terciaria} strokeWidth={1.5} strokeDasharray="4 4" fill="none" dot={false} />
@@ -143,7 +144,7 @@ export function DonutCategorias({ fatias }: { fatias: FatiaCategoria[] }) {
               content={({ active, payload }) =>
                 active && payload?.length ? (
                   <div className="opi-tip">
-                    <i className="block not-italic text-white/60">{String(payload[0].name)}</i>
+                    <i className="block not-italic text-muted">{String(payload[0].name)}</i>
                     <b className="tabular-nums">{formatarBRL(Number(payload[0].value ?? 0))}</b>
                   </div>
                 ) : null
@@ -182,7 +183,7 @@ function Barra({ titulo, pp, rotuloPago }: { titulo: string; pp: PrevistoPago; r
         <span className="opi-num text-sm">{pp.pctPago === null ? "—" : `${pct}%`}</span>
       </div>
       <div
-        className="mt-2 h-3 w-full overflow-hidden rounded-full bg-[rgba(17,18,23,.07)]"
+        className="mt-2 h-3 w-full overflow-hidden rounded-full bg-track"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
@@ -193,8 +194,7 @@ function Barra({ titulo, pp, rotuloPago }: { titulo: string; pp: PrevistoPago; r
           className="h-full rounded-full"
           style={{
             width: `${pct}%`,
-            background: "linear-gradient(90deg, rgba(217,84,30,.55), #D9541E)",
-            boxShadow: pct > 0 ? "0 0 16px rgba(217,84,30,.45)" : "none",
+            background: "linear-gradient(90deg, var(--color-accent-line), var(--color-accent))",
           }}
         />
       </div>

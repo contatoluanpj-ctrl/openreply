@@ -155,12 +155,12 @@ export function ChatCentral() {
             rows={4}
             maxLength={4000}
             placeholder="Escreva do seu jeito. Ex.: quero começar a criar a área da comunidade."
-            className="w-full resize-none rounded-2xl border border-[#111217]/12 bg-white/80 px-4 py-3 text-[15px] placeholder:text-muted focus:border-[#D9541E] focus:outline-none"
+            className="w-full resize-none rounded-2xl border border-border bg-surface-hover px-4 py-3 text-[15px] placeholder:text-muted focus:border-accent focus:outline-none"
           />
           <div className="mt-2 flex flex-wrap gap-1.5">
             {EXEMPLOS.map((ex) => (
               <button key={ex} type="button" onClick={() => { setTexto(ex); setPendente(null); }}
-                className="rounded-full border border-[#111217]/10 bg-white/60 px-3 py-1 text-xs text-muted hover:text-foreground">
+                className="rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted hover:text-foreground">
                 {ex}
               </button>
             ))}
@@ -168,7 +168,7 @@ export function ChatCentral() {
           {!pendente && (
             <div className="mt-4 flex justify-end">
               <button type="submit" disabled={pensando || !texto.trim()}
-                className="rounded-full bg-[#111217] px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40">
+                className="rounded-full bg-foreground px-5 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-40">
                 {pensando ? "Vendo quem faz…" : "Encaminhar"}
               </button>
             </div>
@@ -176,7 +176,7 @@ export function ChatCentral() {
         </form>
 
         {pendente && (
-          <div className="mt-5 rounded-2xl border border-[#D9541E]/30 bg-[#D9541E]/[.05] p-4">
+          <div className="mt-5 rounded-2xl border border-accent-line bg-accent-soft p-4">
             <p className="opi-label">Vai para</p>
             <p className="mt-1 text-xs text-muted">
               {pendente.sugestao ? `Sugestão do Jev: ${pendente.sugestao.motivo}` : "O Jev não respondeu: escolha quem faz (padrão: CEO)."}
@@ -184,12 +184,12 @@ export function ChatCentral() {
             <div className="mt-3 flex flex-wrap gap-2">
               {destinos.map((id) => (
                 <button key={id} type="button" onClick={() => alternar(id)} title="Tirar"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#111217] px-3 py-1.5 text-sm font-semibold text-white">
-                  {nomeDoAgente(id)} <span aria-hidden className="text-white/60">×</span>
+                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-sm font-semibold text-background">
+                  {nomeDoAgente(id)} <span aria-hidden className="text-muted">×</span>
                 </button>
               ))}
               <select aria-label="Adicionar agente" value="" onChange={(e) => e.target.value && alternar(e.target.value)}
-                className="rounded-full border border-[#111217]/12 bg-white px-3 py-1.5 text-sm">
+                className="rounded-full border border-border bg-surface px-3 py-1.5 text-sm">
                 <option value="">+ adicionar</option>
                 {outros.map((id) => <option key={id} value={id}>{nomeDoAgente(id)} — {membroPorId(id)?.papel}</option>)}
               </select>
@@ -202,7 +202,7 @@ export function ChatCentral() {
             <div className="mt-4 flex items-center justify-end gap-2">
               <button type="button" onClick={() => setPendente(null)} className="rounded-full px-4 py-2 text-sm text-muted hover:text-foreground">Cancelar</button>
               <button type="button" onClick={() => void enviar()} disabled={enviando || destinos.length === 0}
-                className="rounded-full bg-[#D9541E] px-5 py-2 text-sm font-semibold text-white shadow-[0_0_18px_rgba(217,84,30,.4)] hover:opacity-90 disabled:opacity-40">
+                className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground hover:opacity-90 disabled:opacity-40">
                 {enviando ? "Enviando…" : destinos.length > 1 ? `Enviar para ${destinos.length}` : "Enviar"}
               </button>
             </div>
@@ -225,19 +225,19 @@ export function ChatCentral() {
         )}
         <ul className="space-y-3">
           {conversas.map((c, i) => (
-            <li key={i} className="rounded-2xl border border-[#111217]/8 bg-white/70 p-3.5">
+            <li key={i} className="rounded-2xl border border-border bg-surface-hover p-3.5">
               <p className="whitespace-pre-wrap break-words text-sm font-medium">{c.original}</p>
               <p className="mt-1 text-[11px] text-muted">{quando(c.createdAt)}</p>
               <ul className="mt-2 space-y-1.5">
                 {c.itens.map((p) => (
-                  <li key={p.id} className="rounded-xl bg-[#111217]/[.04] px-3 py-2">
+                  <li key={p.id} className="rounded-xl bg-inset px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-semibold">{nomeDoAgente(p.agente)}</span>
                       <Badge tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Badge>
                     </div>
                     {p.resposta && (
                       <details className="mt-1 text-sm">
-                        <summary className="cursor-pointer text-xs font-semibold text-[#D9541E]">Ver resposta</summary>
+                        <summary className="cursor-pointer text-xs font-semibold text-accent-text">Ver resposta</summary>
                         <p className="mt-2 whitespace-pre-wrap break-words">{p.resposta}</p>
                       </details>
                     )}

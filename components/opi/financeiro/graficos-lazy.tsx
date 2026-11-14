@@ -5,7 +5,7 @@
 import dynamic from "next/dynamic";
 
 const Reserva = ({ altura }: { altura: number }) => (
-  <div aria-hidden className="animate-pulse rounded-2xl bg-[#111217]/[0.05]" style={{ height: altura }} />
+  <div aria-hidden className="animate-pulse rounded-2xl bg-inset" style={{ height: altura }} />
 );
 
 export const GraficoReceitaDespesa = dynamic(() => import("./graficos").then((m) => m.GraficoReceitaDespesa), {

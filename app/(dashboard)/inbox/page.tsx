@@ -257,7 +257,7 @@ export default function InboxPage() {
       return (
         <div className="space-y-2 p-4" aria-busy="true" aria-label="Carregando conversas">
           {Array.from({ length: 5 }, (_, i) => (
-            <div key={i} className="h-12 animate-pulse rounded-2xl bg-[#111217]/5" />
+            <div key={i} className="h-12 animate-pulse rounded-2xl bg-inset" />
           ))}
         </div>
       );
@@ -270,7 +270,7 @@ export default function InboxPage() {
           <button
             type="button"
             onClick={() => void loadConversations(false)}
-            className="rounded-full border border-border bg-white/50 px-3 py-1 text-sm text-foreground hover:bg-surface-hover"
+            className="rounded-full border border-border bg-surface px-3 py-1 text-sm text-foreground hover:bg-surface-hover"
           >
             Tentar de novo
           </button>
@@ -325,7 +325,7 @@ export default function InboxPage() {
               <button
                 type="button"
                 onClick={() => void carregarContas()}
-                className="rounded-full border border-border bg-white/50 px-3 py-1 text-sm text-foreground hover:bg-surface-hover"
+                className="rounded-full border border-border bg-surface px-3 py-1 text-sm text-foreground hover:bg-surface-hover"
               >
                 Tentar de novo
               </button>
@@ -335,7 +335,7 @@ export default function InboxPage() {
               <p className="font-semibold text-foreground">Nenhuma conta do Instagram conectada neste workspace.</p>
               <p className="text-muted">
                 Conecte a conta em{" "}
-                <Link href="/settings" className="font-semibold text-accent hover:underline">
+                <Link href="/settings" className="font-semibold text-accent-text hover:underline">
                   Configurações
                 </Link>{" "}
                 para ver e responder as DMs aqui.
@@ -406,7 +406,7 @@ export default function InboxPage() {
                     <button
                       type="button"
                       onClick={() => void loadMessages(active.id, false)}
-                      className="rounded-full border border-border bg-white/50 px-3 py-1 text-sm text-foreground hover:bg-surface-hover"
+                      className="rounded-full border border-border bg-surface px-3 py-1 text-sm text-foreground hover:bg-surface-hover"
                     >
                       Tentar de novo
                     </button>
@@ -420,11 +420,11 @@ export default function InboxPage() {
                     <div key={m.id} className={`flex ${m.fromMe ? "justify-end" : "justify-start"}`}>
                       <div
                         className={`max-w-[75%] rounded-2xl px-3 py-2 text-sm ${
-                          m.fromMe ? "bg-accent text-white" : "border border-border bg-white/70 text-foreground"
+                          m.fromMe ? "bg-accent text-accent-foreground" : "border border-border bg-surface-hover text-foreground"
                         }`}
                       >
                         <p className="whitespace-pre-wrap break-words">{m.text || "(mídia sem texto)"}</p>
-                        <p className={`mt-1 text-[10px] ${m.fromMe ? "text-white/75" : "text-muted"}`}>
+                        <p className={`mt-1 text-[10px] ${m.fromMe ? "text-accent-foreground/80" : "text-muted"}`}>
                           {formatarQuando(m.createdTime)}
                         </p>
                       </div>
@@ -443,13 +443,13 @@ export default function InboxPage() {
                     onKeyDown={handleKeyDown}
                     rows={1}
                     placeholder="Escreva a resposta… (Enter envia, Shift+Enter quebra a linha)"
-                    className="max-h-32 min-h-[40px] flex-1 resize-none rounded-2xl border border-border bg-white/60 px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent/40 focus:outline-none"
+                    className="max-h-32 min-h-[40px] flex-1 resize-none rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent/40 focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => void handleSend()}
                     disabled={sending || !draft.trim() || !active.contact.id || active.detailsUnavailable}
-                    className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
+                    className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent-hover disabled:opacity-50"
                   >
                     {sending ? "Enviando…" : "Enviar"}
                   </button>

@@ -18,7 +18,7 @@ import dynamic from "next/dynamic";
 // recharts só baixa quando o gráfico aparece.
 const FollowerChart = dynamic(() => import("@/components/follower-chart"), {
   ssr: false,
-  loading: () => <div aria-hidden className="h-[260px] animate-pulse rounded-2xl bg-[#111217]/[0.05]" />,
+  loading: () => <div aria-hidden className="h-[260px] animate-pulse rounded-2xl bg-inset" />,
 });
 import type { OverviewResponse } from "@/app/api/instagram/overview/route";
 
@@ -85,8 +85,8 @@ export default function OverviewPage() {
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
         {[...Array(6)].map((_, i) => (
           <div key={i} className="panel rounded p-4 h-24 sm:p-5">
-            <div className="h-4 w-16 bg-zinc-200 rounded" />
-            <div className="mt-3 h-6 w-20 bg-zinc-200/60 rounded" />
+            <div className="h-4 w-16 bg-track rounded" />
+            <div className="mt-3 h-6 w-20 bg-track rounded" />
           </div>
         ))}
       </div>
@@ -100,7 +100,7 @@ export default function OverviewPage() {
         {error.includes("connect") && (
           <a
             href="/api/instagram/connect"
-            className="mt-4 inline-block text-sm text-accent hover:underline"
+            className="mt-4 inline-block text-sm text-accent-text hover:underline"
           >
             {t("Connect Instagram")}
           </a>
@@ -136,7 +136,7 @@ export default function OverviewPage() {
         </div>
         <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
           <label className="flex flex-col gap-2 text-sm">
-            <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            <span className="text-xs font-semibold uppercase tracking-wide text-faint">
               {t("Range")}
             </span>
             <select
@@ -175,7 +175,7 @@ export default function OverviewPage() {
           </p>
           <a
             href="/api/instagram/connect"
-            className="mt-3 inline-block text-sm text-accent hover:underline"
+            className="mt-3 inline-block text-sm text-accent-text hover:underline"
           >
             {t("Reconnect Instagram")}
           </a>
@@ -206,7 +206,7 @@ export default function OverviewPage() {
           <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-zinc-500 border-b border-border">
+                <tr className="text-left text-xs uppercase tracking-wide text-faint border-b border-border">
                   <th className="py-2 pr-4 font-medium">{t("Post")}</th>
                   <th className="py-2 px-3 font-medium text-right">{t("Views")}</th>
                   <th className="py-2 px-3 font-medium text-right">{t("Reach")}</th>
@@ -229,7 +229,7 @@ export default function OverviewPage() {
                           href={p.permalink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-foreground hover:text-accent truncate block"
+                          className="text-foreground hover:text-accent-text truncate block"
                         >
                           {p.caption || t("{type} post", { type: p.mediaType })}
                         </a>
@@ -257,7 +257,7 @@ export default function OverviewPage() {
                     <td className="py-3 px-3 text-right text-muted">
                       {formatNumber(p.shares, locale)}
                     </td>
-                    <td className="py-3 pl-3 text-right text-zinc-500">
+                    <td className="py-3 pl-3 text-right text-faint">
                       {formatDate(p.timestamp, locale)}
                     </td>
                   </tr>

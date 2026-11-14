@@ -136,7 +136,7 @@ export function TabelaConteudo() {
             <select
               value={quantidade}
               onChange={(e) => trocarQuantidade(e.target.value)}
-              className="rounded-xl border border-border bg-white/70 px-3 py-2 text-sm text-foreground"
+              className="rounded-xl border border-border bg-surface-hover px-3 py-2 text-sm text-foreground"
             >
               {QUANTIDADES.map((q) => (
                 <option key={q.valor} value={q.valor}>
@@ -151,7 +151,7 @@ export function TabelaConteudo() {
           <div aria-busy="true" className="space-y-2">
             <span className="sr-only">Carregando os posts…</span>
             {Array.from({ length: 6 }, (_, i) => (
-              <div key={i} aria-hidden className="h-11 animate-pulse rounded-2xl bg-[#111217]/[0.06]" />
+              <div key={i} aria-hidden className="h-11 animate-pulse rounded-2xl bg-inset" />
             ))}
           </div>
         )}
@@ -183,7 +183,7 @@ export function TabelaConteudo() {
                       <td className="max-w-[320px] py-3 pr-4">
                         <span className="line-clamp-2 text-foreground">{inicioLegenda(l.caption)}</span>
                         {l.permalink && (
-                          <a href={l.permalink} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-accent hover:underline">
+                          <a href={l.permalink} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-accent-text hover:underline">
                             Abrir no Instagram →
                           </a>
                         )}

@@ -4,7 +4,7 @@
 export type FormaEsqueleto = "painel" | "lista" | "grade" | "conversa" | "formulario";
 
 function Bloco({ className = "" }: { className?: string }) {
-  return <div aria-hidden className={`animate-pulse rounded-2xl bg-[#111217]/[0.06] ${className}`} />;
+  return <div aria-hidden className={`animate-pulse rounded-2xl bg-inset ${className}`} />;
 }
 
 function Cabecalho() {
