@@ -9,7 +9,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   DEPARTAMENTOS,
   MENU_HOJE,
@@ -51,6 +51,21 @@ const ICONE: Record<string, ReactNode> = {
   "/dashboard/chat": <path d="M2.2 3h11.6v7.8H8.4l-3.2 2.8v-2.8h-3V3Z" />,
 };
 
+const CONSULTA_DESKTOP = "(min-width: 1024px)";
+
+/** No servidor vale "desktop": a gaveta só fica inerte depois de saber que a tela é de celular. */
+function useDesktop() {
+  return useSyncExternalStore(
+    (avisar) => {
+      const mq = window.matchMedia(CONSULTA_DESKTOP);
+      mq.addEventListener("change", avisar);
+      return () => mq.removeEventListener("change", avisar);
+    },
+    () => window.matchMedia(CONSULTA_DESKTOP).matches,
+    () => true,
+  );
+}
+
 function Icone({ nome }: { nome: string }) {
   return (
     <svg
@@ -79,7 +94,39 @@ export default function Sidebar({ isOpen, onClose, workspaceName, tema, onTema, 
   const dono = departamentoDaRota(pathname)?.slug ?? null;
   // Aberto = o departamento da tela atual, mais o que o Luan abriu ou fechou à mão.
   const [manual, setManual] = useState<Record<string, boolean>>({});
+  // Ao mudar de rota, a escolha manual do departamento dono da tela nova é descartada: se o Luan o tinha
+  // fechado e agora a rota é uma tela dele, ele volta a abrir.
+  const [rotaVista, setRotaVista] = useState(pathname);
+  if (rotaVista !== pathname) {
+    setRotaVista(pathname);
+    if (dono && dono in manual) {
+      const { [dono]: _descartado, ...resto } = manual;
+      setManual(resto);
+    }
+  }
   const aberto = (slug: string) => manual[slug] ?? slug === dono;
+
+  // Gaveta do celular: fechada não recebe foco nem leitor de tela; Esc fecha; o foco entra ao abrir e volta ao fechar.
+  const desktop = useDesktop();
+  const gavetaFechada = !isOpen && !desktop;
+  const asideRef = useRef<HTMLElement>(null);
+  const abriuDe = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!isOpen || desktop) return;
+    abriuDe.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    asideRef.current?.querySelector<HTMLElement>("a[href], button")?.focus();
+    const aoTeclar = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", aoTeclar);
+    return () => {
+      document.removeEventListener("keydown", aoTeclar);
+      const volta = abriuDe.current;
+      abriuDe.current = null;
+      // Só devolve o foco ao botão se ele ainda é o que abriu a gaveta (um clique num link já levou o foco adiante).
+      if (volta && volta.isConnected && (document.activeElement === document.body || asideRef.current?.contains(document.activeElement))) volta.focus();
+    };
+  }, [isOpen, desktop, onClose]);
 
   return (
     <>
@@ -87,6 +134,8 @@ export default function Sidebar({ isOpen, onClose, workspaceName, tema, onTema, 
       {isOpen && <div className="fixed inset-0 z-40 bg-overlay lg:hidden" onClick={onClose} />}
 
       <aside
+        ref={asideRef}
+        inert={gavetaFechada}
         className={`
           fixed top-0 left-0 z-50 h-dvh w-[272px] max-w-[85vw] shrink-0 flex flex-col
           bg-surface-strong border-r border-border
@@ -156,7 +205,7 @@ export default function Sidebar({ isOpen, onClose, workspaceName, tema, onTema, 
                           type="button"
                           aria-expanded={expandido}
                           aria-controls={idLista}
-                          aria-label={`${expandido ? "Fechar" : "Abrir"} as telas de ${dep.nome}`}
+                          aria-label={`Telas de ${dep.nome}`}
                           onClick={() => setManual((m) => ({ ...m, [dep.slug]: !expandido }))}
                           className="grid h-10 w-9 shrink-0 place-items-center rounded-xl text-faint lg:h-9 hover:bg-surface-hover hover:text-foreground"
                         >
@@ -166,8 +215,8 @@ export default function Sidebar({ isOpen, onClose, workspaceName, tema, onTema, 
                         </button>
                       )}
                     </div>
-                    {expandido && (
-                      <ul id={idLista} className="mb-1.5 ml-[1.35rem] mt-0.5 space-y-0.5 border-l border-border pl-2">
+                    {itens.length > 0 && (
+                      <ul id={idLista} hidden={!expandido} className="mb-1.5 ml-[1.35rem] mt-0.5 space-y-0.5 border-l border-border pl-2">
                         {itens.map((item) => {
                           const ativo = itemAtivo(item, pathname);
                           return (
