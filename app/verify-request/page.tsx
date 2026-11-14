@@ -5,7 +5,7 @@ import { TelaEntrada } from "@/components/opi/tela-entrada";
 export async function generateMetadata() {
   const { t } = await getI18n();
   return {
-    title: t("Check your email - OPI Central"),
+    title: t("Check your email - OpenReply"),
     description: t("A sign-in link was sent to your email."),
   };
 }

@@ -11,7 +11,7 @@ const SETUP_DOCS_URL = `${GITHUB_URL}/blob/main/docs/setup.md`;
 export async function generateMetadata() {
   const { t } = await getI18n();
   return {
-    title: t("Sign in - OPI Central"),
+    title: t("Login - OpenReply"),
     description: t("Sign in to manage Instagram comment-to-DM campaigns."),
   };
 }
