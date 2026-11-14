@@ -163,7 +163,7 @@ export function GraficoSeguidores({ bloco, className }: { bloco: Bloco<PorPeriod
       ) : comValor.length < 2 ? (
         <Vazio
           titulo="Ainda sem histórico"
-          texto="A linha aparece quando houver pelo menos dois dias de seguidores coletados do Instagram (coleta diária do OpenReply)."
+          texto="A linha aparece quando houver pelo menos dois dias de seguidores coletados do Instagram (coleta diária do painel)."
         />
       ) : (
         <ResponsiveContainer width="100%" height={260}>
