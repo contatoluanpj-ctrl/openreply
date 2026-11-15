@@ -92,8 +92,24 @@ describe("testarRede: leitura real, uma rede por vez", () => {
     expect(por.youtube).toMatchObject({ ok: true, conta: "@luan.s.cardoso", metricas: { inscritos: 12, visualizacoes: 340, publicacoes: 3 } });
     expect(por.linkedin).toMatchObject({ ok: true, conta: "Luan Siqueira Cardoso (luan-s-cardoso)", metricas: { _autor: "urn:li:person:9HVNKIMMNZ" } });
     expect(por.x).toMatchObject({ ok: false, semConfiguracao: true });
+    expect(por.threads).toMatchObject({ ok: false, semConfiguracao: true });
     // Só leitura: nenhuma ferramenta de escrita foi chamada.
     expect(f.chamadas.every((c) => c.metodo === "GET" || /YOUTUBE_LIST_CHANNELS|LINKEDIN_GET_MY_INFO/.test(c.url))).toBe(true);
+  });
+
+  it("Threads conectado responde com o @ da conta, só com leitura do perfil", async () => {
+    const f = fetchFalso([["tools/execute/THREADS_GET_MY_PROFILE", composio({ id: "26", username: "luan.s.cardoso", name: "Luan" })]]);
+    const r = await testarRede("threads", { fetch: f.fn, graph: null, env: { ...ENV, COMPOSIO_THREADS_ACCOUNT_ID: "ca_th" } });
+    expect(r).toMatchObject({ rede: "threads", ok: true, conta: "@luan.s.cardoso", semConfiguracao: false });
+    expect(f.chamadas).toHaveLength(1);
+    expect(JSON.parse(f.chamadas[0].corpo)).toEqual({
+      user_id: "user-1",
+      connected_account_id: "ca_th",
+      arguments: { fields: ["id", "username", "name"] },
+    });
+    // Sem o nome da conta na resposta, o teste falha em vez de dizer "conectado".
+    const vazio = fetchFalso([["tools/execute/THREADS_GET_MY_PROFILE", composio({ id: "26" })]]);
+    expect(await testarRede("threads", { fetch: vazio.fn, graph: null, env: { ...ENV, COMPOSIO_THREADS_ACCOUNT_ID: "ca_th" } })).toMatchObject({ ok: false, semConfiguracao: false });
   });
 
   it("usa a conta conectada de cada rede e o user_id do projeto", async () => {

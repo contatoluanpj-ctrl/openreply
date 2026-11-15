@@ -16,7 +16,7 @@ const corpoSchema = z
     rede: z.enum(REDES_DESTINO),
     titulo: texto(300).optional(),
     descricao: texto(5000).optional(),
-    /** Aprovação própria do destino (obrigatória para linkedin e x). */
+    /** Aprovação própria do destino (obrigatória para linkedin, x e threads). */
     aprovar: z.boolean().optional(),
     /** Devolve para a fila um destino que falhou ou foi pulado. */
     tentarDeNovo: z.boolean().optional(),
@@ -41,7 +41,7 @@ export async function GET(_request: Request, { params }: RouteProps) {
 
 /**
  * POST /api/opi/posts/[id]/destinos { rede, titulo?, descricao?, aprovar?, tentarDeNovo? }
- * Cria ou ajusta o destino de uma rede neste post. É o único caminho para linkedin e x, que o
+ * Cria ou ajusta o destino de uma rede neste post. É o único caminho para linkedin, x e threads, que o
  * publicador nunca cria sozinho e só publica depois de `aprovar: true`. Mudar o texto de um destino
  * com aprovação própria derruba a aprovação (como editar um post aprovado, D-0026).
  */

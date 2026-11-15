@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { PublicadorErro } from "@/lib/opi/publicadores/tipos";
 
 /**
- * Cliente REST mínimo do Composio (sem SDK), usado pelo YouTube, LinkedIn e X.
+ * Cliente REST mínimo do Composio (sem SDK), usado pelo YouTube, LinkedIn, X e Threads.
  *
  * Documentação usada (conferida em 14/11/2026):
  * - Execução de ferramenta: https://docs.composio.dev/reference/api-reference/tools/postToolsExecuteByToolSlug
@@ -19,7 +19,7 @@ export const COMPOSIO_NAO_CONFIGURADO = "Composio não configurado";
 
 type Env = Record<string, string | undefined>;
 
-export type RedeComposio = "youtube" | "linkedin" | "x";
+export type RedeComposio = "youtube" | "linkedin" | "x" | "threads";
 
 export type ComposioConfig = {
   apiKey: string;
@@ -41,6 +41,7 @@ export function composioConfig(env: Env = process.env): ComposioConfig | null {
       youtube: conta("COMPOSIO_YOUTUBE_ACCOUNT_ID"),
       linkedin: conta("COMPOSIO_LINKEDIN_ACCOUNT_ID"),
       x: conta("COMPOSIO_X_ACCOUNT_ID"),
+      threads: conta("COMPOSIO_THREADS_ACCOUNT_ID"),
     },
   };
 }

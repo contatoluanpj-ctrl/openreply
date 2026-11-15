@@ -66,8 +66,8 @@ const OR_DESTINOS = [
       some: {
         status: "PENDENTE",
         tentativas: { lt: 3 },
-        rede: { notIn: ["youtube", "linkedin", "x"] }, // sem COMPOSIO_API_KEY nos testes
-        OR: [{ rede: { notIn: ["linkedin", "x"] } }, { aprovadoEm: { not: null } }],
+        rede: { notIn: ["youtube", "linkedin", "x", "threads"] }, // sem COMPOSIO_API_KEY nos testes
+        OR: [{ rede: { notIn: ["linkedin", "x", "threads"] } }, { aprovadoEm: { not: null } }],
       },
     },
   },

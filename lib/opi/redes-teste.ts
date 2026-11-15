@@ -15,7 +15,7 @@ import type { RedeId } from "@/lib/opi/redes";
  *   _autor   (LinkedIn) URN do autor, usado pelo publicador quando OPI_LINKEDIN_AUTOR_URN não existe
  */
 
-export const REDES_TESTAVEIS = ["instagram", "facebook", "youtube", "linkedin", "x"] as const;
+export const REDES_TESTAVEIS = ["instagram", "facebook", "youtube", "linkedin", "x", "threads"] as const;
 export type RedeTestavel = (typeof REDES_TESTAVEIS)[number];
 
 export type ResultadoTeste = {
@@ -158,6 +158,28 @@ async function testarX(cfg: ComposioConfig | null, deps: DepsTeste): Promise<Res
   };
 }
 
+async function testarThreads(cfg: ComposioConfig | null, deps: DepsTeste): Promise<ResultadoTeste> {
+  if (!cfg) return falha("threads", COMPOSIO_AUSENTE, true);
+  if (!cfg.contas.threads) return falha("threads", "Threads ainda não conectado no Composio (falta COMPOSIO_THREADS_ACCOUNT_ID).", true);
+  const d = await executarFerramenta(
+    cfg,
+    "THREADS_GET_MY_PROFILE",
+    { fields: ["id", "username", "name"] },
+    { fetch: deps.fetch, contaId: cfg.contas.threads },
+  );
+  const usuario = txt(d.username);
+  if (!usuario) return falha("threads", "O Threads respondeu sem o nome da conta.");
+  return {
+    rede: "threads",
+    ok: true,
+    conta: `@${usuario}`,
+    detalhe: `Conta @${usuario} respondeu.`,
+    // Seguidores exigem a leitura de insights do perfil; fica para quando a conta tiver histórico.
+    metricas: {},
+    semConfiguracao: false,
+  };
+}
+
 /** Testa uma rede. Nunca lança: qualquer erro vira resultado com o motivo, sem token nem chave no texto. */
 export async function testarRede(rede: RedeTestavel, deps: DepsTeste): Promise<ResultadoTeste> {
   const env = deps.env ?? process.env;
@@ -174,6 +196,8 @@ export async function testarRede(rede: RedeTestavel, deps: DepsTeste): Promise<R
         return await testarLinkedin(cfg, deps);
       case "x":
         return await testarX(cfg, deps);
+      case "threads":
+        return await testarThreads(cfg, deps);
     }
   } catch (e) {
     const bruto = e instanceof Error ? e.message : "Erro desconhecido";

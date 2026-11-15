@@ -7,15 +7,15 @@ import type { PrismaClient } from "@/app/generated/prisma/client";
  */
 
 /** Redes que podem ser destino, na ordem em que o publicador tenta e a tela mostra. */
-export const REDES_DESTINO = ["instagram", "facebook", "youtube", "linkedin", "x", "tiktok"] as const;
+export const REDES_DESTINO = ["instagram", "facebook", "youtube", "linkedin", "x", "threads", "tiktok"] as const;
 export type RedeDestino = (typeof REDES_DESTINO)[number];
 
 /** Redes que podem ser criadas sozinhas na aprovação do calendário (OPI_DESTINOS_PADRAO). */
 export const REDES_AUTOMATICAS: readonly RedeDestino[] = ["instagram", "facebook", "youtube"];
 /** Redes que só saem com aprovação própria do destino (PostDestino.aprovadoEm). */
-export const REDES_APROVACAO_PROPRIA: readonly RedeDestino[] = ["linkedin", "x"];
+export const REDES_APROVACAO_PROPRIA: readonly RedeDestino[] = ["linkedin", "x", "threads"];
 /** Redes publicadas pelo Composio. Sem COMPOSIO_API_KEY ficam PENDENTE. */
-export const REDES_COMPOSIO: readonly RedeDestino[] = ["youtube", "linkedin", "x"];
+export const REDES_COMPOSIO: readonly RedeDestino[] = ["youtube", "linkedin", "x", "threads"];
 /** Redes publicadas pela Graph da Meta. */
 export const REDES_META: readonly RedeDestino[] = ["instagram", "facebook"];
 
@@ -31,6 +31,7 @@ export const NOME_REDE: Record<RedeDestino, string> = {
   youtube: "YouTube",
   linkedin: "LinkedIn",
   x: "X",
+  threads: "Threads",
   tiktok: "TikTok",
 };
 
@@ -57,7 +58,7 @@ type Env = Record<string, string | undefined>;
 /**
  * Destinos criados quando o post é aprovado no calendário.
  * - Reel: o que estiver em OPI_DESTINOS_PADRAO (padrão "instagram"), só entre instagram, facebook e youtube.
- *   linkedin e x nunca entram aqui, mesmo se escritos na variável.
+ *   linkedin, x e threads nunca entram aqui, mesmo se escritos na variável.
  * - Carrossel e imagem: só instagram (as outras redes só recebem Reel).
  */
 export function destinosPadrao(tipo: string, env: Env = process.env): RedeDestino[] {

@@ -28,6 +28,7 @@ import { rodarPublicador } from "@/lib/opi/publicador";
 import { COMPOSIO_BASE, COMPOSIO_NAO_CONFIGURADO, composioConfig, enviarArquivo, executarFerramenta } from "@/lib/opi/publicadores/composio";
 import { publicarReelFacebook } from "@/lib/opi/publicadores/facebook";
 import { publicarLinkedin } from "@/lib/opi/publicadores/linkedin";
+import { THREADS_SEM_CONTA, bytesUtf8, publicarThreads } from "@/lib/opi/publicadores/threads";
 import { PublicadorErro } from "@/lib/opi/publicadores/tipos";
 import { publicarX } from "@/lib/opi/publicadores/x";
 import { privacidadeYoutube, publicarYoutube, tagsDaDescricao } from "@/lib/opi/publicadores/youtube";
@@ -189,9 +190,9 @@ describe("seleção de destinos pendentes", () => {
     expect(filtroDestinoElegivel(true)).toEqual({
       status: "PENDENTE",
       tentativas: { lt: MAX_TENTATIVAS },
-      OR: [{ rede: { notIn: ["linkedin", "x"] } }, { aprovadoEm: { not: null } }],
+      OR: [{ rede: { notIn: ["linkedin", "x", "threads"] } }, { aprovadoEm: { not: null } }],
     });
-    expect(filtroDestinoElegivel(false).rede).toEqual({ notIn: ["youtube", "linkedin", "x"] });
+    expect(filtroDestinoElegivel(false).rede).toEqual({ notIn: ["youtube", "linkedin", "x", "threads"] });
   });
   it("a rodada busca só post aprovado, no prazo, com desempate pelo id", async () => {
     mockPrisma.postAgendado.findMany.mockResolvedValue([]);
@@ -485,7 +486,7 @@ describe("Composio sem chave", () => {
     expect(composioConfig({})).toBeNull();
     expect(composioConfig({ COMPOSIO_API_KEY: CHAVE })).toBeNull();
     expect(composioConfig({ COMPOSIO_USER_ID: "u" })).toBeNull();
-    expect(composioConfig(ENV_COMPOSIO)).toEqual({ apiKey: CHAVE, userId: "user-1", contas: { youtube: "ca_yt", linkedin: undefined, x: undefined } });
+    expect(composioConfig(ENV_COMPOSIO)).toEqual({ apiKey: CHAVE, userId: "user-1", contas: { youtube: "ca_yt", linkedin: undefined, x: undefined, threads: undefined } });
   });
 
   it("YouTube fica PENDENTE com o motivo escrito, sem chamada, sem tentativa gasta e sem alerta; o Instagram publica", async () => {
@@ -499,7 +500,7 @@ describe("Composio sem chave", () => {
     expect(mockPrisma.postDestino.updateMany).toHaveBeenCalledWith({
       where: {
         status: "PENDENTE",
-        rede: { in: ["youtube", "linkedin", "x"] },
+        rede: { in: ["youtube", "linkedin", "x", "threads"] },
         OR: [{ erro: null }, { erro: { not: COMPOSIO_NAO_CONFIGURADO } }],
         post: { aprovadoEm: { not: null }, agendadoPara: { lte: AGORA }, status: { in: ["APROVADO", "PUBLICADO"] } },
       },
@@ -564,6 +565,90 @@ describe("LinkedIn e X só com aprovação própria", () => {
       user_id: "user-1",
       arguments: { author: "urn:li:organization:123", commentary: LEGENDA.trim(), visibility: "PUBLIC" },
     });
+  });
+});
+
+describe("Threads: conta pessoal, só com aprovação própria", () => {
+  const ENV_THREADS = { ...ENV_COMPOSIO, COMPOSIO_THREADS_ACCOUNT_ID: "ca_th" };
+  const TEXTO = `Opção tem data para acabar.\n\n${AVISO_OBRIGATORIO}`;
+  const reelPost = { id: "p", tipo: "REEL" as const, midias: ["https://cdn.exemplo/v.mp4"], legenda: LEGENDA };
+  const aprovado = { aprovadoEm: new Date(), descricao: TEXTO };
+  const OK: Array<[string, Resposta]> = [
+    [`POST ${COMPOSIO_BASE}/tools/execute/THREADS_CREATE_POST`, { body: { successful: true, error: null, data: { post_id: "179", permalink: "https://www.threads.com/@luan/post/abc", container_id: "c1", publication_status: "PUBLISHED" } } }],
+  ];
+
+  it("nunca entra sozinho na aprovação do calendário e só é elegível depois de aprovado", () => {
+    expect(destinosPadrao("REEL", { OPI_DESTINOS_PADRAO: "instagram,threads" })).toEqual(["instagram"]);
+    expect(destinoElegivel(destino("threads"), true)).toBe(false);
+    expect(destinoElegivel(destino("threads", { aprovadoEm: new Date() }), true)).toBe(true);
+    expect(destinoElegivel(destino("threads", { aprovadoEm: new Date() }), false)).toBe(false);
+  });
+
+  it("sem aprovação, sem chave ou sem conta conectada fica aguardando, sem tocar a rede", async () => {
+    const f = fetchFalso(OK);
+    expect(await publicarThreads(reelPost, destino("threads", { descricao: TEXTO }), { fetch: f.fn, env: ENV_THREADS })).toEqual({
+      situacao: "aguardando",
+      motivo: "Threads só publica destino aprovado",
+    });
+    expect(await publicarThreads(reelPost, destino("threads", aprovado), { fetch: f.fn, env: {} })).toEqual({ situacao: "aguardando", motivo: COMPOSIO_NAO_CONFIGURADO });
+    expect(await publicarThreads(reelPost, destino("threads", aprovado), { fetch: f.fn, env: ENV_COMPOSIO })).toEqual({ situacao: "aguardando", motivo: THREADS_SEM_CONTA });
+    expect(f.chamadas).toEqual([]);
+  });
+
+  it("texto vazio, sem o aviso ou acima de 500 bytes é barrado antes de qualquer chamada", async () => {
+    const f = fetchFalso(OK);
+    const ctx = { fetch: f.fn, env: ENV_THREADS };
+    await expect(publicarThreads(reelPost, destino("threads", { aprovadoEm: new Date(), descricao: "  " }), ctx)).rejects.toThrow(/sem texto próprio/);
+    await expect(publicarThreads(reelPost, destino("threads", { aprovadoEm: new Date(), descricao: "Texto sem aviso" }), ctx)).rejects.toThrow(/aviso obrigatório/);
+    // 430 "ç" são 430 caracteres e 860 bytes: o limite é em bytes.
+    const longo = `${"ç".repeat(430)} ${AVISO_OBRIGATORIO}`;
+    expect(longo.length).toBeLessThan(500);
+    expect(bytesUtf8(longo)).toBeGreaterThan(500);
+    await expect(publicarThreads(reelPost, destino("threads", { aprovadoEm: new Date(), descricao: longo }), ctx)).rejects.toThrow(/500 bytes/);
+    // A legenda do Reel nunca entra no lugar do texto próprio.
+    await expect(publicarThreads(reelPost, destino("threads", { aprovadoEm: new Date() }), ctx)).rejects.toThrow(/sem texto próprio/);
+    expect(f.chamadas).toEqual([]);
+  });
+
+  it("Reel aprovado sai como vídeo pela URL pública, com o texto do destino e a conta do Threads", async () => {
+    const f = fetchFalso(OK);
+    const r = await publicarThreads(reelPost, destino("threads", aprovado), { fetch: f.fn, env: ENV_THREADS });
+    expect(r).toEqual({ situacao: "publicado", externoId: "179", permalink: "https://www.threads.com/@luan/post/abc" });
+    expect(f.chamadas).toHaveLength(1);
+    expect(f.chamadas[0].headers["x-api-key"]).toBe(CHAVE);
+    expect(JSON.parse(f.chamadas[0].corpo)).toEqual({
+      user_id: "user-1",
+      connected_account_id: "ca_th",
+      arguments: { media_type: "VIDEO", video_url: "https://cdn.exemplo/v.mp4", text: TEXTO },
+    });
+  });
+
+  it("post que não é Reel de 1 vídeo sai só com o texto", async () => {
+    const f = fetchFalso(OK);
+    const carrossel = { id: "p", tipo: "CARROSSEL" as const, midias: ["https://cdn.exemplo/1.jpg", "https://cdn.exemplo/2.jpg"], legenda: LEGENDA };
+    await publicarThreads(carrossel, destino("threads", aprovado), { fetch: f.fn, env: ENV_THREADS });
+    expect(JSON.parse(f.chamadas[0].corpo).arguments).toEqual({ media_type: "TEXT", text: TEXTO });
+  });
+
+  it("sucesso sem id vira erro NÃO repetível (o post pode ter saído); falha da ferramenta também, sem a chave no texto", async () => {
+    const semId = fetchFalso([[`POST ${COMPOSIO_BASE}/tools/execute/THREADS_CREATE_POST`, { body: { successful: true, data: {} } }]]);
+    const e1 = await publicarThreads(reelPost, destino("threads", aprovado), { fetch: semId.fn, env: ENV_THREADS }).catch((e) => e);
+    expect(e1).toBeInstanceOf(PublicadorErro);
+    expect((e1 as PublicadorErro).repetivel).toBe(false);
+
+    const falhou = fetchFalso([[`POST ${COMPOSIO_BASE}/tools/execute/THREADS_CREATE_POST`, { body: { successful: false, error: `token ${CHAVE} recusado` } }]]);
+    const e2 = await publicarThreads(reelPost, destino("threads", aprovado), { fetch: falhou.fn, env: ENV_THREADS }).catch((e) => e);
+    expect(e2).toBeInstanceOf(PublicadorErro);
+    expect((e2 as PublicadorErro).repetivel).toBe(false);
+    expect((e2 as Error).message).not.toContain(CHAVE);
+  });
+
+  it("na rodada, threads sem aprovação nem é travado", async () => {
+    mockPrisma.postAgendado.findMany.mockResolvedValue([reel([destino("instagram"), destino("threads", { descricao: TEXTO })])]);
+    const f = fetchFalso([...IG_OK, ...OK]);
+    await rodarPublicador(AGORA, deps(f.fn, ENV_THREADS));
+    expect(mockPrisma.postDestino.updateMany.mock.calls.some((c) => c[0].where.id === "d-threads")).toBe(false);
+    expect(f.chamadas.some((c) => c.url.includes("THREADS_CREATE_POST"))).toBe(false);
   });
 });
 

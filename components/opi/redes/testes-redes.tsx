@@ -6,7 +6,7 @@ import { Badge } from "@/components/opi";
 type Resultado = { rede: string; ok: boolean; conta: string | null; detalhe: string; semConfiguracao: boolean };
 type Envio = { ok: boolean; rede: string; detalhe: string; link?: string | null };
 
-const NOME: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", youtube: "YouTube", linkedin: "LinkedIn", x: "X" };
+const NOME: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", youtube: "YouTube", linkedin: "LinkedIn", x: "X", threads: "Threads" };
 
 const BOTAO =
   "inline-flex items-center justify-center rounded-xl border border-border px-3.5 py-2 text-sm font-semibold text-foreground transition hover:border-accent disabled:cursor-not-allowed disabled:opacity-50";

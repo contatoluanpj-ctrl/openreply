@@ -9,6 +9,7 @@ import {
   type PostParaPublicar,
   type ResultadoDestino,
 } from "@/lib/opi/publicadores/tipos";
+import { publicarThreads } from "@/lib/opi/publicadores/threads";
 import { publicarX } from "@/lib/opi/publicadores/x";
 import { publicarYoutube } from "@/lib/opi/publicadores/youtube";
 
@@ -43,6 +44,8 @@ export async function publicarDestino(
       return publicarLinkedin(post, destino, ctx);
     case "x":
       return publicarX(post, destino, ctx);
+    case "threads":
+      return publicarThreads(post, destino, ctx);
     default:
       return pulado("Rede sem publicador automático");
   }
