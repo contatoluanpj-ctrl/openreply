@@ -60,8 +60,10 @@ type Env = Record<string, string | undefined>;
  * - Reel: o que estiver em OPI_DESTINOS_PADRAO (padrão "instagram"), só entre instagram, facebook e youtube.
  *   linkedin, x e threads nunca entram aqui, mesmo se escritos na variável.
  * - Carrossel e imagem: só instagram (as outras redes só recebem Reel).
+ * - Texto: linkedin e threads, que continuam esperando a aprovação própria de cada destino. Nunca instagram.
  */
 export function destinosPadrao(tipo: string, env: Env = process.env): RedeDestino[] {
+  if (tipo === "TEXTO") return ["linkedin", "threads"];
   if (tipo !== "REEL") return ["instagram"];
   const pedidos = (env.OPI_DESTINOS_PADRAO ?? "")
     .split(",")

@@ -5,7 +5,7 @@
 
 export type PostParaPublicar = {
   id: string;
-  tipo: "CARROSSEL" | "REEL" | "POST";
+  tipo: "CARROSSEL" | "REEL" | "POST" | "TEXTO";
   midias: unknown;
   legenda: string;
 };
@@ -47,6 +47,16 @@ export const aguardando = (motivo: string): ResultadoDestino => ({ situacao: "ag
 export function listaMidias(midias: unknown): string[] {
   if (!Array.isArray(midias)) return [];
   return midias.filter((m): m is string => typeof m === "string" && m.startsWith("https://"));
+}
+
+/**
+ * Texto que vai para uma rede de texto (LinkedIn, X, Threads): o texto próprio do destino; num post do tipo
+ * TEXTO sem texto próprio, a legenda do post (que é o próprio texto). Num Reel, nunca a legenda.
+ */
+export function textoDoDestino(post: PostParaPublicar, destino: DestinoParaPublicar): string {
+  const proprio = (destino.descricao ?? "").trim();
+  if (proprio) return proprio;
+  return post.tipo === "TEXTO" ? (post.legenda ?? "").trim() : "";
 }
 
 export const esperaPadrao = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));

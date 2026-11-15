@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { canManageWorkspace, getCurrentWorkspaceContext } from "@/lib/workspace-access";
 import { postRascunhoSchema } from "@/lib/opi/posts-schema";
+import { REDES_APROVACAO_PROPRIA } from "@/lib/opi/destinos";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,16 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     },
   });
   if (resultado.count === 0) return respostaSemAlteracao(id, r.ctx.workspaceId, "editado");
+  // LinkedIn, X e Threads sem texto próprio publicam o texto do post: editar o post derruba a aprovação deles.
+  await prisma.postDestino.updateMany({
+    where: {
+      postId: id,
+      rede: { in: [...REDES_APROVACAO_PROPRIA] },
+      descricao: null,
+      status: { notIn: ["PUBLICANDO", "PUBLICADO"] },
+    },
+    data: { aprovadoEm: null, aprovadoPor: null },
+  });
   const post = await prisma.postAgendado.findFirst({ where: { id, workspaceId: r.ctx.workspaceId } });
   return NextResponse.json({ post });
 }

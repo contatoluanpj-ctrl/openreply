@@ -3,6 +3,7 @@ import { COMPOSIO_NAO_CONFIGURADO, composioConfig, executarFerramenta } from "@/
 import {
   PublicadorErro,
   aguardando,
+  textoDoDestino,
   type DestinoParaPublicar,
   type PostParaPublicar,
   type ResultadoDestino,
@@ -63,7 +64,7 @@ export function montarThreads(textoBruto: string): ArgumentosThreads {
 type Env = Record<string, string | undefined>;
 
 export async function publicarThreads(
-  _post: PostParaPublicar,
+  post: PostParaPublicar,
   destino: DestinoParaPublicar,
   ctx: { fetch: typeof fetch; env?: Env },
 ): Promise<ResultadoDestino> {
@@ -72,7 +73,7 @@ export async function publicarThreads(
   if (!cfg) return aguardando(COMPOSIO_NAO_CONFIGURADO);
   if (!cfg.contas.threads) return aguardando(THREADS_SEM_CONTA);
 
-  const texto = (destino.descricao ?? "").trim();
+  const texto = textoDoDestino(post, destino);
   if (!texto) throw new PublicadorErro("Threads sem texto próprio no destino");
   if (texto.length > THREADS_ANEXO_MAX) throw new PublicadorErro(`Texto do Threads passa de ${THREADS_ANEXO_MAX} caracteres`);
   if (!temAviso(texto)) throw new PublicadorErro("Texto do Threads sem o aviso obrigatório. Nada foi publicado.");

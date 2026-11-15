@@ -17,7 +17,7 @@ export const STATUS_ROTULO: Record<PostStatusOpi, string> = {
   ERRO: "Erro",
 };
 
-export const TIPO_ROTULO: Record<PostTipoOpi, string> = { CARROSSEL: "Carrossel", REEL: "Reel", POST: "Imagem" };
+export const TIPO_ROTULO: Record<PostTipoOpi, string> = { CARROSSEL: "Carrossel", REEL: "Reel", POST: "Imagem", TEXTO: "Texto" };
 
 /** Rascunho cinza, aprovado/publicando no detalhe, publicado verde, erro vermelho. Tudo em tom baixo. */
 export const STATUS_CLASSE: Record<PostStatusOpi, { chip: string; ponto: string }> = {
@@ -44,6 +44,12 @@ export function IconeTipo({ tipo, className = "h-3 w-3" }: { tipo: PostTipoOpi; 
       <svg {...comum}>
         <rect x="2" y="2" width="12" height="12" rx="3" />
         <path d="M6.5 5.5v5l4-2.5z" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  if (tipo === "TEXTO")
+    return (
+      <svg {...comum}>
+        <path d="M3 4h10M3 8h10M3 12h6" />
       </svg>
     );
   if (tipo === "CARROSSEL")

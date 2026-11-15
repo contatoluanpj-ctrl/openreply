@@ -89,7 +89,7 @@ const fmtHoraPost = new Intl.DateTimeFormat("pt-BR", {
 });
 
 function rotuloPost(post: { tipo: string; agendadoPara?: Date | null }): string {
-  const tipo = post.tipo === "REEL" ? "Reel" : post.tipo === "CARROSSEL" ? "Carrossel" : "Post";
+  const tipo = post.tipo === "REEL" ? "Reel" : post.tipo === "CARROSSEL" ? "Carrossel" : post.tipo === "TEXTO" ? "Texto" : "Post";
   return post.agendadoPara instanceof Date ? `${tipo} de ${fmtHoraPost.format(post.agendadoPara)}` : tipo;
 }
 
@@ -115,7 +115,7 @@ type DestinoDaRodada = DestinoLinha & { titulo?: string | null; descricao?: stri
 type PostDaRodada = {
   id: string;
   workspaceId: string;
-  tipo: "CARROSSEL" | "REEL" | "POST";
+  tipo: "CARROSSEL" | "REEL" | "POST" | "TEXTO";
   midias: unknown;
   legenda: string;
   agendadoPara: Date;
@@ -259,7 +259,8 @@ export async function rodarPublicador(agora: Date = new Date(), depsTeste?: Deps
       const eraAprovado = post.status === "APROVADO";
       let destinos: DestinoDaRodada[] = ordenarDestinos(post.destinos ?? []);
       if (destinos.length === 0) {
-        if (!eraAprovado) continue;
+        // Post de texto sem destino: nada a fazer (nunca ganha o destino instagram).
+        if (!eraAprovado || post.tipo === "TEXTO") continue;
         const criado = await prisma.postDestino.upsert({
           where: { postId_rede: { postId: post.id, rede: "instagram" } },
           create: { postId: post.id, rede: "instagram" },

@@ -118,6 +118,38 @@ describe("rotas de posts", () => {
     expect(arg.data).toMatchObject({ status: "RASCUNHO", aprovadoEm: null, aprovadoPor: null });
   });
 
+  it("POST de TEXTO: sem mídia, até 3.000 caracteres; com mídia é recusado; os outros tipos seguem no limite de 2.200", async () => {
+    mockPrisma.postAgendado.create.mockResolvedValue({ id: "t1" });
+    const texto = `${"a".repeat(2500)} ${AVISO_OBRIGATORIO}`;
+    const ok = await POST(req("/api/opi/posts", { tipo: "TEXTO", midias: [], legenda: texto, agendadoPara: futuro.toISOString() }));
+    expect(ok.status).toBe(201);
+    expect(mockPrisma.postAgendado.create.mock.calls[0][0].data).toMatchObject({ tipo: "TEXTO", midias: [], status: "RASCUNHO" });
+
+    const comMidia = await POST(req("/api/opi/posts", { tipo: "TEXTO", midias: ["https://a/1.png"], legenda: texto, agendadoPara: futuro.toISOString() }));
+    expect(comMidia.status).toBe(400);
+    const longo = await POST(req("/api/opi/posts", { tipo: "TEXTO", midias: [], legenda: "a".repeat(3001), agendadoPara: futuro.toISOString() }));
+    expect(longo.status).toBe(400);
+    const imagemLonga = await POST(req("/api/opi/posts", { tipo: "POST", midias: ["https://a/1.png"], legenda: texto, agendadoPara: futuro.toISOString() }));
+    expect(imagemLonga.status).toBe(400);
+    const reelSemVideo = await POST(req("/api/opi/posts", { tipo: "REEL", midias: [], legenda: "x", agendadoPara: futuro.toISOString() }));
+    expect(reelSemVideo.status).toBe(400);
+    expect(mockPrisma.postAgendado.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("PATCH derruba a aprovação própria de LinkedIn, X e Threads que publicam o texto do post", async () => {
+    mockPrisma.postAgendado.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.postAgendado.findFirst.mockResolvedValue({ id: "t1", status: "RASCUNHO" });
+    const res = await PATCH(
+      req("/api/opi/posts/t1", { tipo: "TEXTO", midias: [], legenda: `Outro texto. ${AVISO_OBRIGATORIO}`, agendadoPara: futuro.toISOString() }, "PATCH"),
+      { params: Promise.resolve({ id: "t1" }) },
+    );
+    expect(res.status).toBe(200);
+    expect(mockPrisma.postDestino.updateMany).toHaveBeenCalledWith({
+      where: { postId: "t1", rede: { in: ["linkedin", "x", "threads"] }, descricao: null, status: { notIn: ["PUBLICANDO", "PUBLICADO"] } },
+      data: { aprovadoEm: null, aprovadoPor: null },
+    });
+  });
+
   it("PATCH de PUBLICADO responde 409", async () => {
     mockPrisma.postAgendado.updateMany.mockResolvedValue({ count: 0 });
     mockPrisma.postAgendado.findFirst.mockResolvedValue({ status: "PUBLICADO" });
@@ -160,6 +192,21 @@ describe("aprovar-mes", () => {
     const res = await APROVAR(req("/api/opi/posts/aprovar-mes", { mes: "2026-11" }));
     expect(res.status).toBe(422);
     expect(mockPrisma.postAgendado.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("post de TEXTO aprovado no mês ganha só linkedin e threads (nunca instagram)", async () => {
+    mockPrisma.postAgendado.findMany.mockResolvedValue([{ id: "t", tipo: "TEXTO", legenda: `T. ${AVISO_OBRIGATORIO}`, agendadoPara: futuro }]);
+    mockPrisma.user.findUnique.mockResolvedValue({ email: "luan@exemplo.com" });
+    mockPrisma.postAgendado.updateMany.mockResolvedValue({ count: 1 });
+    const res = await APROVAR(req("/api/opi/posts/aprovar-mes", { mes: "2026-11" }));
+    expect(res.status).toBe(200);
+    expect(mockPrisma.postDestino.createMany).toHaveBeenCalledWith({
+      data: [
+        { postId: "t", rede: "linkedin" },
+        { postId: "t", rede: "threads" },
+      ],
+      skipDuplicates: true,
+    });
   });
 
   it("aprova todos os rascunhos do mês com aprovadoEm e aprovadoPor", async () => {

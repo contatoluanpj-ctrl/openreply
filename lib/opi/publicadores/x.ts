@@ -3,6 +3,7 @@ import { COMPOSIO_NAO_CONFIGURADO, composioConfig, executarFerramenta } from "@/
 import {
   PublicadorErro,
   aguardando,
+  textoDoDestino,
   type DestinoParaPublicar,
   type PostParaPublicar,
   type ResultadoDestino,
@@ -19,7 +20,7 @@ export const X_TEXTO_MAX = 280;
 type Env = Record<string, string | undefined>;
 
 export async function publicarX(
-  _post: PostParaPublicar,
+  post: PostParaPublicar,
   destino: DestinoParaPublicar,
   ctx: { fetch: typeof fetch; env?: Env },
 ): Promise<ResultadoDestino> {
@@ -27,7 +28,7 @@ export async function publicarX(
   const cfg = composioConfig(ctx.env ?? process.env);
   if (!cfg) return aguardando(COMPOSIO_NAO_CONFIGURADO);
 
-  const texto = (destino.descricao ?? "").trim();
+  const texto = textoDoDestino(post, destino);
   if (!texto) throw new PublicadorErro("X sem texto próprio no destino");
   if (texto.length > X_TEXTO_MAX) throw new PublicadorErro(`Texto do X passa de ${X_TEXTO_MAX} caracteres`);
   if (!temAviso(texto)) throw new PublicadorErro("Texto do X sem o aviso obrigatório. Nada foi publicado.");

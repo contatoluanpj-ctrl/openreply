@@ -4,13 +4,14 @@ import { confirmar } from "@/lib/opi/confirmar";
 import { useState } from "react";
 import { Badge } from "@/components/opi";
 import { AVISO_OBRIGATORIO, temAviso } from "@/lib/opi/aviso";
-import { deInputSP, diaSP, LEGENDA_MAX, paraInputSP, type PostTipoOpi } from "@/lib/opi/posts-schema";
+import { deInputSP, diaSP, limiteLegenda, paraInputSP, type PostTipoOpi } from "@/lib/opi/posts-schema";
 import type { PostCalendario } from "./tipos";
 
 const TIPO_ROTULO: Record<PostTipoOpi, string> = {
   CARROSSEL: "Carrossel",
   REEL: "Reel",
   POST: "Imagem única",
+  TEXTO: "Só texto (LinkedIn e Threads)",
 };
 
 const campo =
@@ -49,10 +50,13 @@ export function EditorPost({ post, diaInicial, onSalvo, onFechar }: EditorPostPr
     setSalvando(true);
     setErro(null);
     try {
-      const midias = midiasTexto
-        .split(/\r?\n/)
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const midias =
+        tipo === "TEXTO"
+          ? []
+          : midiasTexto
+              .split(/\r?\n/)
+              .map((s) => s.trim())
+              .filter(Boolean);
       const corpo = { tipo, midias, legenda, agendadoPara: deInputSP(quando) };
       const res = await fetch(post ? `/api/opi/posts/${post.id}` : "/api/opi/posts", {
         method: post ? "PATCH" : "POST",
@@ -123,6 +127,7 @@ export function EditorPost({ post, diaInicial, onSalvo, onFechar }: EditorPostPr
         </select>
       </label>
 
+      {tipo !== "TEXTO" && (
       <label className="block space-y-1">
         <span className="text-xs font-medium text-muted">
           {tipo === "CARROSSEL"
@@ -139,18 +144,24 @@ export function EditorPost({ post, diaInicial, onSalvo, onFechar }: EditorPostPr
           placeholder="https://..."
         />
       </label>
+      )}
+      {tipo === "TEXTO" && (
+        <p className="text-xs text-muted">
+          Sai no LinkedIn e no Threads, cada um com a sua aprovação. Nunca vai para o Instagram.
+        </p>
+      )}
 
       <label className="block space-y-1">
         <span className="flex items-center justify-between gap-2 text-xs font-medium text-muted">
           <span>Legenda</span>
           <span>
-            {legenda.length}/{LEGENDA_MAX}
+            {legenda.length}/{limiteLegenda(tipo)}
           </span>
         </span>
         <textarea
           className={`${campo} min-h-40`}
           value={legenda}
-          maxLength={LEGENDA_MAX}
+          maxLength={limiteLegenda(tipo)}
           disabled={bloqueado}
           onChange={(e) => setLegenda(e.target.value)}
         />

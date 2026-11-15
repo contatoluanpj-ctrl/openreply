@@ -27,6 +27,7 @@ import {
 import { rodarPublicador } from "@/lib/opi/publicador";
 import { COMPOSIO_BASE, COMPOSIO_NAO_CONFIGURADO, composioConfig, enviarArquivo, executarFerramenta } from "@/lib/opi/publicadores/composio";
 import { publicarReelFacebook } from "@/lib/opi/publicadores/facebook";
+import { publicarDestino } from "@/lib/opi/publicadores";
 import { publicarLinkedin } from "@/lib/opi/publicadores/linkedin";
 import { THREADS_SEM_CONTA, bytesUtf8, montarThreads, publicarThreads } from "@/lib/opi/publicadores/threads";
 import { PublicadorErro } from "@/lib/opi/publicadores/tipos";
@@ -681,6 +682,55 @@ describe("Threads: conta pessoal, só texto, só com aprovação própria", () =
     await rodarPublicador(AGORA, deps(f.fn, ENV_THREADS));
     expect(mockPrisma.postDestino.updateMany.mock.calls.some((c) => c[0].where.id === "d-threads")).toBe(false);
     expect(f.chamadas.some((c) => c.url.includes("THREADS_CREATE_POST"))).toBe(false);
+  });
+});
+
+describe("Post só de TEXTO (LinkedIn e Threads)", () => {
+  const ENV_TODOS = { ...ENV_COMPOSIO, COMPOSIO_THREADS_ACCOUNT_ID: "ca_th", COMPOSIO_LINKEDIN_ACCOUNT_ID: "ca_li", OPI_LINKEDIN_AUTOR_URN: "urn:li:person:abc" };
+  const TEXTO = `Vender uma opção coberta não protege contra a queda.\n\n${AVISO_OBRIGATORIO}`;
+  const textoPost = { id: "p", tipo: "TEXTO" as const, midias: [], legenda: TEXTO };
+
+  it("destinos padrão do TEXTO são linkedin e threads, mesmo com OPI_DESTINOS_PADRAO pedindo instagram", () => {
+    expect(destinosPadrao("TEXTO", { OPI_DESTINOS_PADRAO: "instagram,facebook,youtube" })).toEqual(["linkedin", "threads"]);
+  });
+
+  it("LinkedIn e Threads aprovados publicam a legenda do post quando o destino não tem texto próprio", async () => {
+    const f = fetchFalso([
+      [`POST ${COMPOSIO_BASE}/tools/execute/LINKEDIN_CREATE_LINKED_IN_POST`, { body: { successful: true, data: { x_restli_id: "urn:li:share:1" } } }],
+      [`POST ${COMPOSIO_BASE}/tools/execute/THREADS_CREATE_POST`, { body: { successful: true, data: { post_id: "th1" } } }],
+    ]);
+    const ctx = { fetch: f.fn, env: ENV_TODOS };
+    expect(await publicarLinkedin(textoPost, destino("linkedin", { aprovadoEm: new Date() }), ctx)).toMatchObject({ situacao: "publicado" });
+    expect(await publicarThreads(textoPost, destino("threads", { aprovadoEm: new Date() }), ctx)).toMatchObject({ situacao: "publicado", externoId: "th1" });
+    expect(JSON.parse(f.chamadas[0].corpo).arguments.commentary).toBe(TEXTO);
+    expect(JSON.parse(f.chamadas[1].corpo).arguments).toEqual({ media_type: "TEXT", text: TEXTO });
+  });
+
+  it("Instagram, Facebook e YouTube pulam post de texto sem chamar a rede", async () => {
+    const f = fetchFalso([]);
+    for (const rede of ["instagram", "facebook", "youtube"]) {
+      expect(await publicarDestino(textoPost, destino(rede, { titulo: "T" }), { graph: deps(f.fn), fetch: f.fn, env: ENV_TODOS })).toMatchObject({ situacao: "pulado" });
+    }
+    expect(f.chamadas).toEqual([]);
+  });
+
+  it("na rodada, post de TEXTO aprovado sem destino não ganha o instagram", async () => {
+    mockPrisma.postAgendado.findMany.mockResolvedValue([reel([], { tipo: "TEXTO", midias: [], legenda: TEXTO })]);
+    const f = fetchFalso([]);
+    await rodarPublicador(AGORA, deps(f.fn, ENV_TODOS));
+    expect(mockPrisma.postDestino.upsert).not.toHaveBeenCalled();
+    expect(f.chamadas).toEqual([]);
+  });
+
+  it("na rodada, TEXTO com linkedin aprovado publica só o linkedin; o threads sem aprovação espera", async () => {
+    mockPrisma.postAgendado.findMany.mockResolvedValue([
+      reel([destino("linkedin", { aprovadoEm: new Date() }), destino("threads")], { tipo: "TEXTO", midias: [], legenda: TEXTO }),
+    ]);
+    const f = fetchFalso([[`POST ${COMPOSIO_BASE}/tools/execute/LINKEDIN_CREATE_LINKED_IN_POST`, { body: { successful: true, data: { x_restli_id: "urn:li:share:2" } } }]]);
+    const r = await rodarPublicador(AGORA, deps(f.fn, ENV_TODOS));
+    expect(r).toMatchObject({ publicados: 1, erros: 0 });
+    expect(f.chamadas.map((c) => c.url)).toEqual([`${COMPOSIO_BASE}/tools/execute/LINKEDIN_CREATE_LINKED_IN_POST`]);
+    expect(mockPrisma.postDestino.updateMany.mock.calls.some((c) => c[0].where.id === "d-threads")).toBe(false);
   });
 });
 

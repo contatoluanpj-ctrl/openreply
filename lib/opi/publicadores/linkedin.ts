@@ -4,6 +4,7 @@ import { urnDoLinkedin } from "@/lib/opi/redes-teste";
 import {
   PublicadorErro,
   aguardando,
+  textoDoDestino,
   type DestinoParaPublicar,
   type PostParaPublicar,
   type ResultadoDestino,
@@ -23,7 +24,7 @@ const URN = /^urn:li:(person|organization):[A-Za-z0-9_-]+$/;
 type Env = Record<string, string | undefined>;
 
 export async function publicarLinkedin(
-  _post: PostParaPublicar,
+  post: PostParaPublicar,
   destino: DestinoParaPublicar,
   ctx: { fetch: typeof fetch; env?: Env },
 ): Promise<ResultadoDestino> {
@@ -32,7 +33,7 @@ export async function publicarLinkedin(
   const cfg = composioConfig(env);
   if (!cfg) return aguardando(COMPOSIO_NAO_CONFIGURADO);
 
-  const texto = (destino.descricao ?? "").trim();
+  const texto = textoDoDestino(post, destino);
   if (!texto) throw new PublicadorErro("LinkedIn sem texto próprio no destino");
   if (texto.length > LINKEDIN_TEXTO_MAX) throw new PublicadorErro(`Texto do LinkedIn passa de ${LINKEDIN_TEXTO_MAX} caracteres`);
   if (!temAviso(texto)) throw new PublicadorErro("Texto do LinkedIn sem o aviso obrigatório. Nada foi publicado.");

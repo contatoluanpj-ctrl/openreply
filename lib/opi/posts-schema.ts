@@ -9,13 +9,18 @@ import { z } from "zod";
 export const FUSO_OFFSET = "-03:00";
 const OFFSET_MS = 3 * 60 * 60 * 1000;
 
-export const POST_TIPOS = ["CARROSSEL", "REEL", "POST"] as const;
+export const POST_TIPOS = ["CARROSSEL", "REEL", "POST", "TEXTO"] as const;
 export type PostTipoOpi = (typeof POST_TIPOS)[number];
 
 export const POST_STATUS = ["RASCUNHO", "APROVADO", "PUBLICANDO", "PUBLICADO", "ERRO"] as const;
 export type PostStatusOpi = (typeof POST_STATUS)[number];
 
 export const LEGENDA_MAX = 2200;
+/** Post só de texto (LinkedIn aceita até 3.000 caracteres; o Threads leva o texto inteiro no anexo). */
+export const TEXTO_MAX = 3000;
+
+/** Limite do campo de texto conforme o tipo. */
+export const limiteLegenda = (tipo: PostTipoOpi): number => (tipo === "TEXTO" ? TEXTO_MAX : LEGENDA_MAX);
 
 const urlPublica = z
   .string()
@@ -26,11 +31,22 @@ const urlPublica = z
 export const postRascunhoSchema = z
   .object({
     tipo: z.enum(POST_TIPOS),
-    midias: z.array(urlPublica).min(1, "Informe ao menos uma mídia").max(10),
-    legenda: z.string().trim().min(1, "Legenda vazia").max(LEGENDA_MAX),
+    midias: z.array(urlPublica).max(10),
+    legenda: z.string().trim().min(1, "Legenda vazia").max(TEXTO_MAX),
     agendadoPara: z.string().datetime({ offset: true, message: "Data inválida" }),
   })
   .superRefine((v, ctx) => {
+    if (v.tipo === "TEXTO") {
+      if (v.midias.length !== 0) ctx.addIssue({ code: "custom", path: ["midias"], message: "Post de texto não leva mídia" });
+      return;
+    }
+    if (v.legenda.length > LEGENDA_MAX) {
+      ctx.addIssue({ code: "custom", path: ["legenda"], message: `Legenda passa de ${LEGENDA_MAX} caracteres` });
+    }
+    if (v.midias.length === 0) {
+      ctx.addIssue({ code: "custom", path: ["midias"], message: "Informe ao menos uma mídia" });
+      return;
+    }
     if (v.tipo === "CARROSSEL" && v.midias.length < 2) {
       ctx.addIssue({ code: "custom", path: ["midias"], message: "Carrossel precisa de 2 a 10 imagens" });
     }

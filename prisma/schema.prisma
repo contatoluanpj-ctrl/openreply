@@ -547,6 +547,8 @@ enum PostTipo {
   CARROSSEL
   REEL
   POST
+  /// Só texto, para LinkedIn e Threads (sem mídia, nunca vai para o Instagram).
+  TEXTO
 }
 
 enum PostStatus {

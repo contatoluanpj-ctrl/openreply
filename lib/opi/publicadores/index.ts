@@ -29,6 +29,9 @@ export async function publicarDestino(
   destino: DestinoParaPublicar,
   ctx: ContextoPublicacao,
 ): Promise<ResultadoDestino> {
+  if (post.tipo === "TEXTO" && (destino.rede === "instagram" || destino.rede === "facebook" || destino.rede === "youtube")) {
+    return pulado("Post só de texto não vai para esta rede");
+  }
   switch (destino.rede) {
     case "instagram": {
       if (!ctx.graph) return aguardando(META_AUSENTE);
