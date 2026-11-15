@@ -28,10 +28,17 @@ import { rodarPublicador } from "@/lib/opi/publicador";
 import { COMPOSIO_BASE, COMPOSIO_NAO_CONFIGURADO, composioConfig, enviarArquivo, executarFerramenta } from "@/lib/opi/publicadores/composio";
 import { publicarReelFacebook } from "@/lib/opi/publicadores/facebook";
 import { publicarLinkedin } from "@/lib/opi/publicadores/linkedin";
-import { THREADS_SEM_CONTA, bytesUtf8, publicarThreads } from "@/lib/opi/publicadores/threads";
+import { THREADS_SEM_CONTA, bytesUtf8, montarThreads, publicarThreads } from "@/lib/opi/publicadores/threads";
 import { PublicadorErro } from "@/lib/opi/publicadores/tipos";
 import { publicarX } from "@/lib/opi/publicadores/x";
-import { privacidadeYoutube, publicarYoutube, tagsDaDescricao } from "@/lib/opi/publicadores/youtube";
+import {
+  YOUTUBE_ESPERA_COTA_MS,
+  YOUTUBE_SEM_COTA,
+  privacidadeYoutube,
+  publicarYoutube,
+  tagsDaDescricao,
+  zerarEsperaCotaYoutube,
+} from "@/lib/opi/publicadores/youtube";
 
 const TOKEN = "TOKEN-SECRETO-123";
 const CHAVE = "ak_CHAVE-SECRETA-999";
@@ -127,6 +134,7 @@ const dadosDoDestino = (id: string) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  zerarEsperaCotaYoutube();
   vi.spyOn(console, "error").mockImplementation(() => {});
   process.env.OPI_PUBLICADOR = "on";
   // Trava do post (por id) passa; a varredura de PUBLICANDO travado não acha nada.
@@ -568,7 +576,7 @@ describe("LinkedIn e X só com aprovação própria", () => {
   });
 });
 
-describe("Threads: conta pessoal, só com aprovação própria", () => {
+describe("Threads: conta pessoal, só texto, só com aprovação própria", () => {
   const ENV_THREADS = { ...ENV_COMPOSIO, COMPOSIO_THREADS_ACCOUNT_ID: "ca_th" };
   const TEXTO = `Opção tem data para acabar.\n\n${AVISO_OBRIGATORIO}`;
   const reelPost = { id: "p", tipo: "REEL" as const, midias: ["https://cdn.exemplo/v.mp4"], legenda: LEGENDA };
@@ -576,6 +584,13 @@ describe("Threads: conta pessoal, só com aprovação própria", () => {
   const OK: Array<[string, Resposta]> = [
     [`POST ${COMPOSIO_BASE}/tools/execute/THREADS_CREATE_POST`, { body: { successful: true, error: null, data: { post_id: "179", permalink: "https://www.threads.com/@luan/post/abc", container_id: "c1", publication_status: "PUBLISHED" } } }],
   ];
+  // Texto no tamanho de um post do LinkedIn: abertura, três parágrafos e o aviso no fim.
+  const LONGO = [
+    "Vender uma opção coberta não protege a ação contra a queda.",
+    "Parágrafo de desenvolvimento. ".repeat(12).trim(),
+    "Segundo parágrafo com acentuação: ação, opção, prêmio, exercício. ".repeat(6).trim(),
+    AVISO_OBRIGATORIO,
+  ].join("\n\n");
 
   it("nunca entra sozinho na aprovação do calendário e só é elegível depois de aprovado", () => {
     expect(destinosPadrao("REEL", { OPI_DESTINOS_PADRAO: "instagram,threads" })).toEqual(["instagram"]);
@@ -595,22 +610,19 @@ describe("Threads: conta pessoal, só com aprovação própria", () => {
     expect(f.chamadas).toEqual([]);
   });
 
-  it("texto vazio, sem o aviso ou acima de 500 bytes é barrado antes de qualquer chamada", async () => {
+  it("texto vazio, sem o aviso ou acima de 10.000 caracteres é barrado antes de qualquer chamada", async () => {
     const f = fetchFalso(OK);
     const ctx = { fetch: f.fn, env: ENV_THREADS };
     await expect(publicarThreads(reelPost, destino("threads", { aprovadoEm: new Date(), descricao: "  " }), ctx)).rejects.toThrow(/sem texto próprio/);
     await expect(publicarThreads(reelPost, destino("threads", { aprovadoEm: new Date(), descricao: "Texto sem aviso" }), ctx)).rejects.toThrow(/aviso obrigatório/);
-    // 430 "ç" são 430 caracteres e 860 bytes: o limite é em bytes.
-    const longo = `${"ç".repeat(430)} ${AVISO_OBRIGATORIO}`;
-    expect(longo.length).toBeLessThan(500);
-    expect(bytesUtf8(longo)).toBeGreaterThan(500);
-    await expect(publicarThreads(reelPost, destino("threads", { aprovadoEm: new Date(), descricao: longo }), ctx)).rejects.toThrow(/500 bytes/);
+    const enorme = `${"a".repeat(10_001)} ${AVISO_OBRIGATORIO}`;
+    await expect(publicarThreads(reelPost, destino("threads", { aprovadoEm: new Date(), descricao: enorme }), ctx)).rejects.toThrow(/10000 caracteres/);
     // A legenda do Reel nunca entra no lugar do texto próprio.
     await expect(publicarThreads(reelPost, destino("threads", { aprovadoEm: new Date() }), ctx)).rejects.toThrow(/sem texto próprio/);
     expect(f.chamadas).toEqual([]);
   });
 
-  it("Reel aprovado sai como vídeo pela URL pública, com o texto do destino e a conta do Threads", async () => {
+  it("texto curto sai como está, só texto: o vídeo do Reel nunca vai para o Threads", async () => {
     const f = fetchFalso(OK);
     const r = await publicarThreads(reelPost, destino("threads", aprovado), { fetch: f.fn, env: ENV_THREADS });
     expect(r).toEqual({ situacao: "publicado", externoId: "179", permalink: "https://www.threads.com/@luan/post/abc" });
@@ -619,15 +631,35 @@ describe("Threads: conta pessoal, só com aprovação própria", () => {
     expect(JSON.parse(f.chamadas[0].corpo)).toEqual({
       user_id: "user-1",
       connected_account_id: "ca_th",
-      arguments: { media_type: "VIDEO", video_url: "https://cdn.exemplo/v.mp4", text: TEXTO },
+      arguments: { media_type: "TEXT", text: TEXTO },
     });
+    expect(f.chamadas[0].corpo).not.toContain("v.mp4");
   });
 
-  it("post que não é Reel de 1 vídeo sai só com o texto", async () => {
+  it("texto do tamanho do LinkedIn: abertura + aviso no corpo (até 500 bytes) e o texto inteiro no anexo", async () => {
+    expect(bytesUtf8(LONGO)).toBeGreaterThan(500);
+    const m = montarThreads(LONGO);
+    expect(m.media_type).toBe("TEXT");
+    expect(m.text).toBe(`Vender uma opção coberta não protege a ação contra a queda.\n\n${AVISO_OBRIGATORIO}`);
+    expect(bytesUtf8(m.text)).toBeLessThanOrEqual(500);
+    expect(m.text_attachment).toEqual({ plaintext: LONGO });
+
     const f = fetchFalso(OK);
-    const carrossel = { id: "p", tipo: "CARROSSEL" as const, midias: ["https://cdn.exemplo/1.jpg", "https://cdn.exemplo/2.jpg"], legenda: LEGENDA };
-    await publicarThreads(carrossel, destino("threads", aprovado), { fetch: f.fn, env: ENV_THREADS });
-    expect(JSON.parse(f.chamadas[0].corpo).arguments).toEqual({ media_type: "TEXT", text: TEXTO });
+    await publicarThreads(reelPost, destino("threads", { aprovadoEm: new Date(), descricao: LONGO }), { fetch: f.fn, env: ENV_THREADS });
+    expect(JSON.parse(f.chamadas[0].corpo).arguments).toEqual(m);
+  });
+
+  it("o limite é em bytes: abertura longa e acentuada é cortada em palavra inteira, com reticências, e o aviso fica", () => {
+    // 430 "ç" são 430 caracteres e 860 bytes.
+    const acentuado = `${"ção ".repeat(150).trim()}\n\nResto.\n\n${AVISO_OBRIGATORIO}`;
+    const m = montarThreads(acentuado);
+    expect(bytesUtf8(m.text)).toBeLessThanOrEqual(500);
+    expect(m.text.endsWith(`…\n\n${AVISO_OBRIGATORIO}`)).toBe(true);
+    expect(m.text.startsWith("ção ção")).toBe(true);
+    expect(m.text).not.toMatch(/ç…|çã…/); // não corta no meio da palavra
+    expect(m.text_attachment?.plaintext).toBe(acentuado);
+    // Texto que cabe não ganha anexo.
+    expect(montarThreads(TEXTO)).toEqual({ media_type: "TEXT", text: TEXTO });
   });
 
   it("sucesso sem id vira erro NÃO repetível (o post pode ter saído); falha da ferramenta também, sem a chave no texto", async () => {
@@ -778,6 +810,62 @@ describe("Composio: cliente e YouTube", () => {
     const e = (await publicarYoutube(post, destino("youtube", { titulo: "T" }), { fetch: fora.fn, env: ENV_COMPOSIO }).catch((x: unknown) => x)) as PublicadorErro;
     expect(e.repetivel).toBe(true);
     expect(fora.chamadas.some((c) => c.url.includes("composio"))).toBe(false);
+  });
+
+  it("YouTube sem cota: não vira ERRO, espera 15 min sem reenviar o vídeo e depois publica", async () => {
+    const post = { id: "p", tipo: "REEL" as const, midias: ["https://cdn.exemplo/v.mp4"], legenda: LEGENDA };
+    const d = destino("youtube", { titulo: "T" });
+    const BASE: Array<[string, Resposta]> = [
+      ["GET https://cdn.exemplo/v.mp4", { body: new TextEncoder().encode("video") }],
+      ["files/upload/request", { body: { key: "k/1", new_presigned_url: "https://s3.exemplo/put" } }],
+      ["PUT https://s3.exemplo/", {}],
+    ];
+    const COTA = { status: 403, body: { error: { message: `{ "error": { "code": 403, "message": "The request cannot be completed because you have exceeded your <a href=\\"/youtube/data/getting-started#quota\\">quota</a>." } }` } } };
+    let relogio = 1_000_000;
+    const agora = () => relogio;
+
+    const semCota = fetchFalso([...BASE, ["tools/execute/YOUTUBE_UPLOAD_VIDEO", COTA]]);
+    expect(await publicarYoutube(post, d, { fetch: semCota.fn, env: ENV_COMPOSIO, agora })).toEqual({ situacao: "aguardando", motivo: YOUTUBE_SEM_COTA });
+    expect(semCota.chamadas).toHaveLength(4);
+
+    // Um minuto depois (próxima rodada): nenhuma chamada, nem o download do vídeo.
+    relogio += 60_000;
+    const cedo = fetchFalso([...BASE, ["tools/execute/YOUTUBE_UPLOAD_VIDEO", COTA]]);
+    expect(await publicarYoutube(post, d, { fetch: cedo.fn, env: ENV_COMPOSIO, agora })).toEqual({ situacao: "aguardando", motivo: YOUTUBE_SEM_COTA });
+    expect(cedo.chamadas).toEqual([]);
+
+    // Passada a espera, tenta de novo e publica.
+    relogio += YOUTUBE_ESPERA_COTA_MS;
+    const voltou = fetchFalso([...BASE, ["tools/execute/YOUTUBE_UPLOAD_VIDEO", { body: { successful: true, data: { response_data: { id: "yt9" } } } }]]);
+    expect(await publicarYoutube(post, d, { fetch: voltou.fn, env: ENV_COMPOSIO, agora })).toMatchObject({ situacao: "publicado", externoId: "yt9" });
+  });
+
+  it("YouTube: erro que não é de cota continua virando falha (não fica tentando para sempre)", async () => {
+    const post = { id: "p", tipo: "REEL" as const, midias: ["https://cdn.exemplo/v.mp4"], legenda: LEGENDA };
+    const f = fetchFalso([
+      ["GET https://cdn.exemplo/v.mp4", { body: new TextEncoder().encode("video") }],
+      ["files/upload/request", { body: { key: "k/1", new_presigned_url: "https://s3.exemplo/put" } }],
+      ["PUT https://s3.exemplo/", {}],
+      ["tools/execute/YOUTUBE_UPLOAD_VIDEO", { body: { successful: false, error: "canal não verificado" } }],
+    ]);
+    const e = await publicarYoutube(post, destino("youtube", { titulo: "T" }), { fetch: f.fn, env: ENV_COMPOSIO }).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(PublicadorErro);
+    expect((e as PublicadorErro).repetivel).toBe(false);
+  });
+
+  it("na rodada, YouTube sem cota fica PENDENTE com o motivo, sem alerta e sem gastar tentativa", async () => {
+    mockPrisma.postAgendado.findMany.mockResolvedValue([reel([destino("instagram"), destino("youtube", { titulo: "Título" })])]);
+    const f = fetchFalso([
+      ...IG_OK,
+      ["GET https://cdn.exemplo/v.mp4", { body: new TextEncoder().encode("video") }],
+      ["files/upload/request", { body: { key: "k/1", new_presigned_url: "https://s3.exemplo/put" } }],
+      ["PUT https://s3.exemplo/", {}],
+      ["tools/execute/YOUTUBE_UPLOAD_VIDEO", { body: { successful: false, error: "quotaExceeded: The request cannot be completed because you have exceeded your quota." } }],
+    ]);
+    const r = await rodarPublicador(AGORA, deps(f.fn, ENV_COMPOSIO));
+    expect(r).toMatchObject({ publicados: 1, erros: 0 });
+    expect(dadosDoDestino("d-youtube")).toEqual([{ status: "PENDENTE", erro: YOUTUBE_SEM_COTA, tentativas: { decrement: 1 } }]);
+    expect(mockAlertar).not.toHaveBeenCalled();
   });
 
   it("privacidade: private por padrão, e só aceita os valores do YouTube", () => {

@@ -1,6 +1,7 @@
 import { temAviso } from "@/lib/opi/aviso";
 import {
   COMPOSIO_NAO_CONFIGURADO,
+  ComposioErro,
   baixarMidia,
   composioConfig,
   enviarArquivo,
@@ -36,6 +37,24 @@ export function privacidadeYoutube(env: Env = process.env): PrivacidadeYoutube {
   return (PRIVACIDADES as readonly string[]).includes(v) ? (v as PrivacidadeYoutube) : "private";
 }
 
+/**
+ * Cota da API do YouTube (visto em 14/11/2026, 22h27: "you have exceeded your quota", HTTP 403).
+ * O login gerenciado do Composio usa um app do Google compartilhado, e a cota diária dele acaba.
+ * Quando o Google recusa por cota, é certo que nada foi publicado: o destino NÃO vira ERRO. Fica
+ * PENDENTE com o motivo escrito e o publicador tenta de novo sozinho, no máximo uma vez a cada
+ * YOUTUBE_ESPERA_COTA_MS (cada tentativa baixa e reenvia o vídeo). A cota volta à meia-noite do
+ * Pacífico (5h de Brasília).
+ */
+export const YOUTUBE_SEM_COTA = "YouTube sem cota agora (app compartilhado do Composio). Nada foi publicado; tenta de novo sozinho.";
+export const YOUTUBE_ESPERA_COTA_MS = 15 * 60_000;
+const COTA = /quota|uploadLimitExceeded|rateLimitExceeded/i;
+let semCotaAte = 0;
+
+/** Só para os testes: esquece a espera por cota guardada na memória do processo. */
+export function zerarEsperaCotaYoutube(): void {
+  semCotaAte = 0;
+}
+
 /** Tags a partir das hashtags da descrição ("#Opções" -> "Opções"), sem repetir. */
 export function tagsDaDescricao(descricao: string): string[] {
   const tags = new Set<string>();
@@ -46,8 +65,9 @@ export function tagsDaDescricao(descricao: string): string[] {
 export async function publicarYoutube(
   post: PostParaPublicar,
   destino: DestinoParaPublicar,
-  ctx: { fetch: typeof fetch; env?: Env },
+  ctx: { fetch: typeof fetch; env?: Env; agora?: () => number },
 ): Promise<ResultadoDestino> {
+  const agora = ctx.agora ?? Date.now;
   if (post.tipo !== "REEL") return pulado("O YouTube só recebe Reel (Short) pelo painel");
   const cfg = composioConfig(ctx.env ?? process.env);
   if (!cfg) return aguardando(COMPOSIO_NAO_CONFIGURADO);
@@ -61,6 +81,8 @@ export async function publicarYoutube(
   }
   const midias = listaMidias(post.midias);
   if (midias.length !== 1) throw new PublicadorErro("Short leva exatamente 1 vídeo");
+  // Cota recusada há pouco: espera, sem baixar nem reenviar o vídeo a cada minuto.
+  if (agora() < semCotaAte) return aguardando(YOUTUBE_SEM_COTA);
 
   const midia = await baixarMidia(midias[0], ctx.fetch);
   const arquivo = await enviarArquivo(
@@ -68,19 +90,28 @@ export async function publicarYoutube(
     { toolkitSlug: "youtube", toolSlug: YOUTUBE_FERRAMENTA, nome: midia.nome, mimetype: midia.mimetype, bytes: midia.bytes },
     ctx.fetch,
   );
-  const dados = await executarFerramenta(
-    cfg,
-    YOUTUBE_FERRAMENTA,
-    {
-      title: titulo,
-      description: descricao,
-      tags: tagsDaDescricao(descricao),
-      categoryId: YOUTUBE_CATEGORIA_EDUCACAO,
-      privacyStatus: privacidadeYoutube(ctx.env ?? process.env),
-      videoFilePath: arquivo,
-    },
-    { fetch: ctx.fetch, contaId: cfg.contas.youtube },
-  );
+  let dados: Record<string, unknown>;
+  try {
+    dados = await executarFerramenta(
+      cfg,
+      YOUTUBE_FERRAMENTA,
+      {
+        title: titulo,
+        description: descricao,
+        tags: tagsDaDescricao(descricao),
+        categoryId: YOUTUBE_CATEGORIA_EDUCACAO,
+        privacyStatus: privacidadeYoutube(ctx.env ?? process.env),
+        videoFilePath: arquivo,
+      },
+      { fetch: ctx.fetch, contaId: cfg.contas.youtube },
+    );
+  } catch (e) {
+    if (e instanceof ComposioErro && COTA.test(e.message)) {
+      semCotaAte = agora() + YOUTUBE_ESPERA_COTA_MS;
+      return aguardando(YOUTUBE_SEM_COTA);
+    }
+    throw e;
+  }
   const video = (dados.response_data ?? dados) as { id?: unknown };
   const id = typeof video.id === "string" ? video.id : "";
   // A ferramenta respondeu com sucesso: o vídeo subiu. Sem id não há como repetir com segurança.
