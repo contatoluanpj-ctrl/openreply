@@ -570,6 +570,9 @@ model PostAgendado {
   status       PostStatus @default(RASCUNHO)
   aprovadoEm   DateTime?
   aprovadoPor  String?
+  /// Preenchido só em post criado pela esteira de vídeo (lib/opi/ingest.ts), ex.: "noticia:N02".
+  /// Editar o post no painel apaga a origem: daí em diante ele segue a aprovação do calendário.
+  origem       String?
   mediaId      String?
   permalink    String?
   erro         String?

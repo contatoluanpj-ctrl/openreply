@@ -116,6 +116,8 @@ describe("rotas de posts", () => {
     const arg = mockPrisma.postAgendado.updateMany.mock.calls[0][0];
     expect(arg.where).toEqual({ id: "p1", workspaceId: "w1", status: { in: ["RASCUNHO", "APROVADO", "ERRO"] } });
     expect(arg.data).toMatchObject({ status: "RASCUNHO", aprovadoEm: null, aprovadoPor: null });
+    // Editado no painel: deixa de ser post da esteira (a chave de serviço não aprova mais este post).
+    expect(arg.data).toMatchObject({ origem: null });
   });
 
   it("POST de TEXTO: 0 ou 1 imagem, até 3.000 caracteres; vídeo ou 2 imagens são recusados; os outros tipos seguem no limite de 2.200", async () => {
@@ -189,6 +191,13 @@ describe("aprovar-mes", () => {
     const dados = await res.json();
     expect(dados.pendencias.map((p: { id: string }) => p.id)).toEqual(["ruim"]);
     expect(mockPrisma.postAgendado.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("rascunho da esteira fica de fora da aprovação do mês (só entra rascunho sem origem)", async () => {
+    mockPrisma.postAgendado.findMany.mockResolvedValue([{ id: "ok", tipo: "REEL", legenda: `Bom. ${AVISO_OBRIGATORIO}`, agendadoPara: futuro }]);
+    mockPrisma.postAgendado.updateMany.mockResolvedValue({ count: 1 });
+    await APROVAR(req("/api/opi/posts/aprovar-mes", { mes: "2026-11" }));
+    expect(mockPrisma.postAgendado.findMany.mock.calls[0][0].where).toMatchObject({ workspaceId: "w1", status: "RASCUNHO", origem: null });
   });
 
   it("422 quando um rascunho tem data já passada", async () => {

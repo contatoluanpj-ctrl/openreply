@@ -26,7 +26,8 @@ export async function POST(request: Request) {
   const { inicio, fim } = mesIntervalo(mes);
 
   const rascunhos = await prisma.postAgendado.findMany({
-    where: { workspaceId: ctx.workspaceId, status: "RASCUNHO", agendadoPara: { gte: inicio, lt: fim } },
+    // Rascunho da esteira de vídeo (origem preenchida) fica de fora: ele só é aprovado com o selo da prévia.
+    where: { workspaceId: ctx.workspaceId, status: "RASCUNHO", origem: null, agendadoPara: { gte: inicio, lt: fim } },
     orderBy: { agendadoPara: "asc" },
     select: { id: true, tipo: true, legenda: true, agendadoPara: true },
   });

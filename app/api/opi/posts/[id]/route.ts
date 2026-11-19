@@ -57,6 +57,8 @@ export async function PATCH(request: Request, { params }: RouteProps) {
       midias,
       legenda,
       agendadoPara: new Date(agendadoPara),
+      // Editado no painel: deixa de ser post da esteira e passa a seguir a aprovação do calendário.
+      origem: null,
       status: "RASCUNHO",
       aprovadoEm: null,
       aprovadoPor: null,

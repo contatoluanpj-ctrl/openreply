@@ -1,2 +1,2 @@
 /** Client-safe constants; do not import the database into client components. */
-export const SERVICE_SCOPES = ["campaigns:read", "redes:write", "agentes:rw", "midia:write"] as const;
+export const SERVICE_SCOPES = ["campaigns:read", "redes:write", "agentes:rw", "midia:write", "posts:rascunho", "posts:aprovar"] as const;
