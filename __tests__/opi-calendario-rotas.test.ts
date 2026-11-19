@@ -118,22 +118,28 @@ describe("rotas de posts", () => {
     expect(arg.data).toMatchObject({ status: "RASCUNHO", aprovadoEm: null, aprovadoPor: null });
   });
 
-  it("POST de TEXTO: sem mídia, até 3.000 caracteres; com mídia é recusado; os outros tipos seguem no limite de 2.200", async () => {
+  it("POST de TEXTO: 0 ou 1 imagem, até 3.000 caracteres; vídeo ou 2 imagens são recusados; os outros tipos seguem no limite de 2.200", async () => {
     mockPrisma.postAgendado.create.mockResolvedValue({ id: "t1" });
     const texto = `${"a".repeat(2500)} ${AVISO_OBRIGATORIO}`;
     const ok = await POST(req("/api/opi/posts", { tipo: "TEXTO", midias: [], legenda: texto, agendadoPara: futuro.toISOString() }));
     expect(ok.status).toBe(201);
     expect(mockPrisma.postAgendado.create.mock.calls[0][0].data).toMatchObject({ tipo: "TEXTO", midias: [], status: "RASCUNHO" });
 
-    const comMidia = await POST(req("/api/opi/posts", { tipo: "TEXTO", midias: ["https://a/1.png"], legenda: texto, agendadoPara: futuro.toISOString() }));
-    expect(comMidia.status).toBe(400);
+    const comImagem = await POST(req("/api/opi/posts", { tipo: "TEXTO", midias: ["https://a/m/post-3.PNG?v=2"], legenda: texto, agendadoPara: futuro.toISOString() }));
+    expect(comImagem.status).toBe(201);
+    expect(mockPrisma.postAgendado.create.mock.calls[1][0].data).toMatchObject({ tipo: "TEXTO", midias: ["https://a/m/post-3.PNG?v=2"] });
+    for (const midias of [["https://a/1.png", "https://a/2.png"], ["https://a/v.mp4"], ["https://a/pagina?arquivo=1.png"]]) {
+      const recusado = await POST(req("/api/opi/posts", { tipo: "TEXTO", midias, legenda: texto, agendadoPara: futuro.toISOString() }));
+      expect(recusado.status).toBe(400);
+    }
+    expect(mockPrisma.postAgendado.create).toHaveBeenCalledTimes(2);
     const longo = await POST(req("/api/opi/posts", { tipo: "TEXTO", midias: [], legenda: "a".repeat(3001), agendadoPara: futuro.toISOString() }));
     expect(longo.status).toBe(400);
     const imagemLonga = await POST(req("/api/opi/posts", { tipo: "POST", midias: ["https://a/1.png"], legenda: texto, agendadoPara: futuro.toISOString() }));
     expect(imagemLonga.status).toBe(400);
     const reelSemVideo = await POST(req("/api/opi/posts", { tipo: "REEL", midias: [], legenda: "x", agendadoPara: futuro.toISOString() }));
     expect(reelSemVideo.status).toBe(400);
-    expect(mockPrisma.postAgendado.create).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.postAgendado.create).toHaveBeenCalledTimes(2);
   });
 
   it("PATCH derruba a aprovação própria de LinkedIn, X e Threads que publicam o texto do post", async () => {

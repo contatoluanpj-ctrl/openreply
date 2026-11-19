@@ -28,7 +28,7 @@ import { rodarPublicador } from "@/lib/opi/publicador";
 import { COMPOSIO_BASE, COMPOSIO_NAO_CONFIGURADO, composioConfig, enviarArquivo, executarFerramenta } from "@/lib/opi/publicadores/composio";
 import { publicarReelFacebook } from "@/lib/opi/publicadores/facebook";
 import { publicarDestino } from "@/lib/opi/publicadores";
-import { publicarLinkedin } from "@/lib/opi/publicadores/linkedin";
+import { LINKEDIN_IMAGEM_MAX_BYTES, publicarLinkedin, tipoDaImagem } from "@/lib/opi/publicadores/linkedin";
 import { THREADS_SEM_CONTA, bytesUtf8, montarThreads, publicarThreads } from "@/lib/opi/publicadores/threads";
 import { PublicadorErro } from "@/lib/opi/publicadores/tipos";
 import { publicarX } from "@/lib/opi/publicadores/x";
@@ -704,6 +704,107 @@ describe("Post só de TEXTO (LinkedIn e Threads)", () => {
     expect(await publicarThreads(textoPost, destino("threads", { aprovadoEm: new Date() }), ctx)).toMatchObject({ situacao: "publicado", externoId: "th1" });
     expect(JSON.parse(f.chamadas[0].corpo).arguments.commentary).toBe(TEXTO);
     expect(JSON.parse(f.chamadas[1].corpo).arguments).toEqual({ media_type: "TEXT", text: TEXTO });
+  });
+
+  describe("com imagem", () => {
+    const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    const URL_IMG = "https://cdn.exemplo/m/post-3-venda-coberta.png";
+    const comImagem = { ...textoPost, midias: [URL_IMG] };
+    const EXECUTAR = `POST ${COMPOSIO_BASE}/tools/execute/LINKEDIN_CREATE_LINKED_IN_POST`;
+    const SUBIR: Array<[string, Resposta]> = [
+      ["files/upload/request", { body: { key: "k/li/1", new_presigned_url: "https://s3.exemplo/put?a=1", metadata: { storage_backend: "s3" } } }],
+      ["PUT https://s3.exemplo/put", {}],
+    ];
+    const OK: [string, Resposta] = [EXECUTAR, { body: { successful: true, data: { x_restli_id: "urn:li:share:9" } } }];
+    const publicou = (f: ReturnType<typeof fetchFalso>) => f.chamadas.some((c) => c.url.includes("tools/execute/LINKEDIN_CREATE"));
+    const aprovadoLi = () => destino("linkedin", { aprovadoEm: new Date() });
+
+    it("baixa a imagem, envia ao Composio e publica com o campo images", async () => {
+      // O servidor mente no cabeçalho de propósito: o tipo vem dos bytes.
+      const f = fetchFalso([[`GET ${URL_IMG}`, { body: PNG, headers: { "content-type": "application/octet-stream" } }], ...SUBIR, OK]);
+      const r = await publicarLinkedin(comImagem, aprovadoLi(), { fetch: f.fn, env: ENV_TODOS });
+      expect(r).toEqual({ situacao: "publicado", externoId: "urn:li:share:9", permalink: "https://www.linkedin.com/feed/update/urn:li:share:9/" });
+      expect(f.urls()).toEqual([`GET ${URL_IMG}`, `POST ${COMPOSIO_BASE}/files/upload/request`, "PUT https://s3.exemplo/put", EXECUTAR]);
+      expect(JSON.parse(f.chamadas[1].corpo)).toMatchObject({
+        toolkit_slug: "linkedin",
+        tool_slug: "LINKEDIN_CREATE_LINKED_IN_POST",
+        filename: "post-3-venda-coberta.png",
+        mimetype: "image/png",
+      });
+      expect(f.chamadas[2].headers["Content-Type"]).toBe("image/png");
+      expect(JSON.parse(f.chamadas[3].corpo)).toEqual({
+        user_id: "user-1",
+        connected_account_id: "ca_li",
+        arguments: {
+          author: "urn:li:person:abc",
+          commentary: TEXTO,
+          visibility: "PUBLIC",
+          images: [{ name: "post-3-venda-coberta.png", mimetype: "image/png", s3key: "k/li/1" }],
+        },
+      });
+    });
+
+    it("sem imagem, não manda o campo images nem baixa nada", async () => {
+      const f = fetchFalso([OK]);
+      await publicarLinkedin(textoPost, aprovadoLi(), { fetch: f.fn, env: ENV_TODOS });
+      expect(f.urls()).toEqual([EXECUTAR]);
+      expect(JSON.parse(f.chamadas[0].corpo).arguments).toEqual({ author: "urn:li:person:abc", commentary: TEXTO, visibility: "PUBLIC" });
+    });
+
+    it("imagem que não baixa ou não sobe: erro repetível e nada é publicado", async () => {
+      const semImagem = fetchFalso([[`GET ${URL_IMG}`, { status: 404 }], ...SUBIR, OK]);
+      await expect(publicarLinkedin(comImagem, aprovadoLi(), { fetch: semImagem.fn, env: ENV_TODOS })).rejects.toMatchObject({ repetivel: true });
+      expect(publicou(semImagem)).toBe(false);
+
+      const semEnvio = fetchFalso([[`GET ${URL_IMG}`, { body: PNG }], ["files/upload/request", { status: 500, body: { error: "fora do ar" } }], OK]);
+      await expect(publicarLinkedin(comImagem, aprovadoLi(), { fetch: semEnvio.fn, env: ENV_TODOS })).rejects.toMatchObject({ repetivel: true });
+      expect(publicou(semEnvio)).toBe(false);
+    });
+
+    it("arquivo que não é imagem (página de erro com nome .png) é recusado sem publicar", async () => {
+      const html = new TextEncoder().encode("<html>Not found</html>");
+      const f = fetchFalso([[`GET ${URL_IMG}`, { body: html, headers: { "content-type": "image/png" } }], ...SUBIR, OK]);
+      await expect(publicarLinkedin(comImagem, aprovadoLi(), { fetch: f.fn, env: ENV_TODOS })).rejects.toThrow(/não é imagem/);
+      expect(f.urls()).toEqual([`GET ${URL_IMG}`]);
+    });
+
+    it("imagem acima do limite ou lista de mídia estranha não publica o texto sozinho", async () => {
+      const grande = new Uint8Array(LINKEDIN_IMAGEM_MAX_BYTES + 1);
+      grande.set(PNG);
+      const f = fetchFalso([[`GET ${URL_IMG}`, { body: grande }], ...SUBIR, OK]);
+      await expect(publicarLinkedin(comImagem, aprovadoLi(), { fetch: f.fn, env: ENV_TODOS })).rejects.toThrow(/limite/);
+      expect(publicou(f)).toBe(false);
+
+      for (const midias of [[URL_IMG, URL_IMG], ["http://sem-https/1.png"], [42]]) {
+        const g = fetchFalso([[`GET ${URL_IMG}`, { body: PNG }], ...SUBIR, OK]);
+        await expect(publicarLinkedin({ ...textoPost, midias }, aprovadoLi(), { fetch: g.fn, env: ENV_TODOS })).rejects.toThrow(/Imagem do post de texto inválida/);
+        expect(g.chamadas).toEqual([]);
+      }
+    });
+
+    it("Reel com destino linkedin nunca manda o vídeo como imagem", async () => {
+      const f = fetchFalso([OK]);
+      const reelPost = { id: "p", tipo: "REEL" as const, midias: ["https://cdn.exemplo/v.mp4"], legenda: LEGENDA };
+      await publicarLinkedin(reelPost, destino("linkedin", { aprovadoEm: new Date(), descricao: TEXTO }), { fetch: f.fn, env: ENV_TODOS });
+      expect(f.urls()).toEqual([EXECUTAR]);
+      expect(JSON.parse(f.chamadas[0].corpo).arguments.images).toBeUndefined();
+    });
+
+    it("o Threads recebe só o texto do post com imagem", async () => {
+      const f = fetchFalso([[`POST ${COMPOSIO_BASE}/tools/execute/THREADS_CREATE_POST`, { body: { successful: true, data: { post_id: "th2" } } }]]);
+      await publicarThreads(comImagem, destino("threads", { aprovadoEm: new Date() }), { fetch: f.fn, env: ENV_TODOS });
+      expect(f.urls()).toEqual([`POST ${COMPOSIO_BASE}/tools/execute/THREADS_CREATE_POST`]);
+      expect(JSON.parse(f.chamadas[0].corpo).arguments).toEqual({ media_type: "TEXT", text: TEXTO });
+    });
+
+    it("tipoDaImagem reconhece png, jpg e gif pelos bytes e recusa o resto", () => {
+      expect(tipoDaImagem(PNG)).toBe("image/png");
+      expect(tipoDaImagem(new Uint8Array([0xff, 0xd8, 0xff, 0xe0]))).toBe("image/jpeg");
+      expect(tipoDaImagem(new TextEncoder().encode("GIF89a"))).toBe("image/gif");
+      expect(tipoDaImagem(new Uint8Array([0x89, 0x50]))).toBeNull();
+      expect(tipoDaImagem(new TextEncoder().encode("<svg"))).toBeNull();
+      expect(tipoDaImagem(new Uint8Array())).toBeNull();
+    });
   });
 
   it("Instagram, Facebook e YouTube pulam post de texto sem chamar a rede", async () => {

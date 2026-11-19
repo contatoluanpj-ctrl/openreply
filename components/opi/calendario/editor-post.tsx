@@ -11,7 +11,7 @@ const TIPO_ROTULO: Record<PostTipoOpi, string> = {
   CARROSSEL: "Carrossel",
   REEL: "Reel",
   POST: "Imagem única",
-  TEXTO: "Só texto (LinkedIn e Threads)",
+  TEXTO: "Texto (LinkedIn e Threads)",
 };
 
 const campo =
@@ -50,13 +50,10 @@ export function EditorPost({ post, diaInicial, onSalvo, onFechar }: EditorPostPr
     setSalvando(true);
     setErro(null);
     try {
-      const midias =
-        tipo === "TEXTO"
-          ? []
-          : midiasTexto
-              .split(/\r?\n/)
-              .map((s) => s.trim())
-              .filter(Boolean);
+      const midias = midiasTexto
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean);
       const corpo = { tipo, midias, legenda, agendadoPara: deInputSP(quando) };
       const res = await fetch(post ? `/api/opi/posts/${post.id}` : "/api/opi/posts", {
         method: post ? "PATCH" : "POST",
@@ -127,27 +124,28 @@ export function EditorPost({ post, diaInicial, onSalvo, onFechar }: EditorPostPr
         </select>
       </label>
 
-      {tipo !== "TEXTO" && (
       <label className="block space-y-1">
         <span className="text-xs font-medium text-muted">
           {tipo === "CARROSSEL"
             ? "URLs públicas das imagens, uma por linha, na ordem (2 a 10)"
             : tipo === "REEL"
               ? "URL pública do vídeo (https)"
-              : "URL pública da imagem (https)"}
+              : tipo === "TEXTO"
+                ? "URL pública da imagem (opcional: png, jpg ou gif)"
+                : "URL pública da imagem (https)"}
         </span>
         <textarea
-          className={`${campo} min-h-24 font-mono text-xs`}
+          className={`${campo} ${tipo === "TEXTO" ? "min-h-10" : "min-h-24"} font-mono text-xs`}
           value={midiasTexto}
           disabled={bloqueado}
           onChange={(e) => setMidiasTexto(e.target.value)}
           placeholder="https://..."
         />
       </label>
-      )}
       {tipo === "TEXTO" && (
         <p className="text-xs text-muted">
-          Sai no LinkedIn e no Threads, cada um com a sua aprovação. Nunca vai para o Instagram.
+          Sai no LinkedIn e no Threads, cada um com a sua aprovação. Nunca vai para o Instagram. A imagem sai só no
+          LinkedIn; o Threads recebe só o texto.
         </p>
       )}
 

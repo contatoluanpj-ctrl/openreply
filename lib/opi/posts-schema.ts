@@ -19,6 +19,16 @@ export const LEGENDA_MAX = 2200;
 /** Post só de texto (LinkedIn aceita até 3.000 caracteres; o Threads leva o texto inteiro no anexo). */
 export const TEXTO_MAX = 3000;
 
+/** Imagem aceita no post de texto: uma, opcional, só png, jpg ou gif. Sai no LinkedIn; o Threads leva só o texto. */
+const IMAGEM_DE_TEXTO = /\.(png|jpe?g|gif)$/i;
+export function ehImagemDeTexto(url: string): boolean {
+  try {
+    return IMAGEM_DE_TEXTO.test(new URL(url).pathname);
+  } catch {
+    return false;
+  }
+}
+
 /** Limite do campo de texto conforme o tipo. */
 export const limiteLegenda = (tipo: PostTipoOpi): number => (tipo === "TEXTO" ? TEXTO_MAX : LEGENDA_MAX);
 
@@ -37,7 +47,11 @@ export const postRascunhoSchema = z
   })
   .superRefine((v, ctx) => {
     if (v.tipo === "TEXTO") {
-      if (v.midias.length !== 0) ctx.addIssue({ code: "custom", path: ["midias"], message: "Post de texto não leva mídia" });
+      if (v.midias.length > 1) {
+        ctx.addIssue({ code: "custom", path: ["midias"], message: "Post de texto leva no máximo 1 imagem" });
+      } else if (v.midias.length === 1 && !ehImagemDeTexto(v.midias[0])) {
+        ctx.addIssue({ code: "custom", path: ["midias"], message: "A mídia do post de texto precisa ser imagem (png, jpg ou gif)" });
+      }
       return;
     }
     if (v.legenda.length > LEGENDA_MAX) {
