@@ -70,10 +70,19 @@ export function caminhoDaMidia(nome: string, agora: Date, aleatorio: string): st
 
 type Env = Record<string, string | undefined>;
 
-/** Id da loja do Blob em minúsculas e sem o prefixo "store_", como aparece no endereço público. */
+/**
+ * Id da loja do Blob em minúsculas e sem o prefixo "store_", como aparece no endereço público.
+ * Vem de BLOB_STORE_ID ou, sem ela, do próprio token de leitura e escrita, que tem o formato
+ * vercel_blob_rw_<id da loja>_<segredo> (a Vercel cria só o token quando liga a loja ao projeto).
+ * Só o id sai daqui; o segredo do token nunca é devolvido nem registrado.
+ */
 export function lojaDoBlob(env: Env = process.env): string | null {
-  const id = (env.BLOB_STORE_ID ?? "").trim().replace(/^store_/i, "").toLowerCase();
-  return /^[a-z0-9]+$/.test(id) ? id : null;
+  const direto = (env.BLOB_STORE_ID ?? "").trim().replace(/^store_/i, "").toLowerCase();
+  if (direto) return /^[a-z0-9]+$/.test(direto) ? direto : null;
+  const partes = (env.BLOB_READ_WRITE_TOKEN ?? "").trim().split("_");
+  if (partes.length < 5 || partes[0] !== "vercel" || partes[1] !== "blob" || partes[2] !== "rw") return null;
+  const doToken = partes[3].toLowerCase();
+  return /^[a-z0-9]+$/.test(doToken) ? doToken : null;
 }
 
 export const armazenamentoConfigurado = (env: Env = process.env): boolean =>

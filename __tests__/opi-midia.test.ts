@@ -66,6 +66,18 @@ describe("mídia: nomes e caminho", () => {
     expect(lojaDoBlob({ BLOB_STORE_ID: "a.b/c" })).toBeNull();
     expect(lojaDoBlob({})).toBeNull();
   });
+
+  it("sem BLOB_STORE_ID, o id da loja sai do token (só o id, nunca o segredo)", () => {
+    const env = { BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_AbC123xyz_SEGREDOsegredo123" };
+    expect(lojaDoBlob(env)).toBe("abc123xyz");
+    expect(midiaDoNossoArmazenamento("https://abc123xyz.public.blob.vercel-storage.com/opi/2026-11/ff-v.mp4", env)).toBe(true);
+    expect(midiaDoNossoArmazenamento("https://segredosegredo123.public.blob.vercel-storage.com/opi/v.mp4", env)).toBe(false);
+    // BLOB_STORE_ID, quando existe, vale mais que o token.
+    expect(lojaDoBlob({ ...env, BLOB_STORE_ID: "store_outra9" })).toBe("outra9");
+    for (const ruim of ["vercel_blob_rw_abc", "outro_blob_rw_abc_segredo", "vercel_blob_ro_abc_segredo", "abc", "vercel_blob_rw_a.b_segredo"]) {
+      expect(lojaDoBlob({ BLOB_READ_WRITE_TOKEN: ruim }), ruim).toBeNull();
+    }
+  });
 });
 
 describe("mídia: só do nosso armazenamento", () => {
